@@ -21,7 +21,7 @@
             height: 360px;
             border: 4px solid #2f6f2f;
             overflow: hidden;
-            background-color: #8b5a2b; /* тоже коричневый, чтобы края совпадали */
+            background-color: #8b5a2b;
         }
 
         #sky, #grass {
@@ -94,6 +94,16 @@
             z-index: 3;
         }
 
+        #result {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 3;
+        }
+
         button.active {
             background: #ffb703;
         }
@@ -120,10 +130,10 @@
     <canvas id="c" width="720" height="360"></canvas>
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
+    <div id="result"></div>
 </div>
 
 <script>
-    // ---- Игра ----
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
 
@@ -149,6 +159,7 @@
     }
 
     c.onclick = e => {
+        if (!gameStarted) return;
         const rect = c.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -252,31 +263,34 @@
         });
         zombies = zombies.filter(z => z.hp > 0);
 
+        const resultDiv = document.getElementById("result");
+
         if (zombies.some(z => z.x < 0 && !lawnmowers[z.row].active)) {
             gameOver = true;
-            status.innerText = "💀 Поражение";
+            resultDiv.innerText = "Ты проиграл!";
+            resultDiv.style.color = "red";
         }
+
         if (spawned >= wave * 5 && zombies.length === 0) {
             if (wave < MAX_WAVES) {
                 wave++;
                 spawned = 0;
             } else {
                 gameOver = true;
-                status.innerText = "🎉 Победа";
+                resultDiv.innerText = "Ты выиграл!";
+                resultDiv.style.color = "green";
             }
         }
     }
 
     function draw() {
         if (gameStarted) {
-            // весь фон зеленый при игре
             ctx.fillStyle = "#7ec850";
             ctx.fillRect(0, 0, c.width, c.height);
         } else {
             ctx.clearRect(0, 0, c.width, c.height);
         }
 
-        // сетка
         ctx.strokeStyle = "#5fa35f";
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
@@ -291,7 +305,6 @@
             ctx.stroke();
         }
 
-        // растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
@@ -316,7 +329,6 @@
             }
         });
 
-        // зомби
         zombies.forEach(z => {
             const zx = z.x, zy = z.row * cellH + cellH / 2;
             ctx.fillStyle = "#4f6f2f";
