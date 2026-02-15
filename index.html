@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>🧠 Mini PvZ<</title>
+    <title>🧠 Mini PvZ</title>
     <style>
         body {
             background: linear-gradient(#87ceeb, #e6f3e6);
@@ -13,7 +13,7 @@
 
         #game {
             text-align: center;
-            margin-top: 20px
+            margin-top: 10px
         }
 
         canvas {
@@ -25,15 +25,21 @@
             margin: 3px;
             padding: 6px 10px
         }
+
+        #panel {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
 <div id="game">
+    <div id="panel">
+        <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
+        <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
+        <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
+    </div>
     <canvas id="c" width="720" height="360"></canvas>
     <br>
-    <button onclick="select('pea')">🌱 Горох (50)</button>
-    <button onclick="select('sun')">🌻 Подсолнух (25)</button>
-    <button onclick="select('nut')">🥜 Орех (25)</button>
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
 </div>
@@ -41,44 +47,76 @@
 <script>
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
-    let sun = 100, plants = [], zombies = [], bullets = [], suns = [];
-    let selectType = null, tick = 0, spawned = 0, gameOver = false;
-    const MAX_Z = 15;
+    let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
+    let selectedPlant = null, tick = 0, wave = 1, spawned = 0, gameOver = false;
 
+    const MAX_WAVES = 3;
     const PLANTS = {
         pea: {cost: 50, hp: 3, shoot: true},
-        sun: {cost: 25, hp: 3, shoot: false, produce: true},
+        sun: {cost: 25, hp: 3, shoot: false, produce: true, cd: 300},
         nut: {cost: 25, hp: 22, shoot: false}
     };
 
-    function select(t) {
-        selectType = t;
+    // Газонокосилки
+    for (let r = 0; r < rows; r++) {
+        lawnmowers.push({row: r, x: -20, active: true});
+    }
+
+    function selectPlant(type) {
+        selectedPlant = type;
     }
 
     c.onclick = e => {
-        const r = c.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-        suns.forEach((s, i) => Math.hypot(s.x - x, s.y - y) < 15 && (sun += 25, suns.splice(i, 1)));
-        if (!selectType) return;
-        const col = x / cellW | 0, row = y / cellH | 0;
+        const rect = c.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        // собираем солнце
+        suns.forEach((s, i) => {
+            if (Math.hypot(s.x - x, s.y - y) < 15) {
+                sun += 25;
+                suns.splice(i, 1);
+            }
+        });
+        if (!selectedPlant) return;
+        const col = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
         if (plants.some(p => p.row === row && p.col === col)) return;
-        const p = PLANTS[selectType];
-        if (sun < p.cost) return;
-        plants.push({row, col, type: selectType, hp: p.hp, cd: 0, scd: 300});
-        sun -= p.cost;
-        selectType = null;
+        if (sun < PLANTS[selectedPlant].cost) return;
+        plants.push({
+            row,
+            col,
+            type: selectedPlant,
+            hp: PLANTS[selectedPlant].hp,
+            cd: 0,
+            scd: PLANTS[selectedPlant].cd
+        });
+        sun -= PLANTS[selectedPlant].cost;
+        selectedPlant = null;
     };
 
+    // Зомби волны
     function spawnZombie() {
-        const r = Math.random();
-        let hp = 9, type = "normal";
-        if (r > .7) {
-            hp = 30;
-            type = "bucket";
-        } else if (r > .4) {
-            hp = 18;
-            type = "cone";
+        let ztype = "normal", hp = 9;
+        if (wave >= 2) {
+            if (Math.random() < 0.5) {
+                ztype = "cone";
+                hp = 18;
+            }
         }
-        zombies.push({row: Math.random() * rows | 0, x: c.width - 20, hp, type, eat: false, t: null});
+        if (wave >= 3) {
+            if (Math.random() < 0.3) {
+                ztype = "bucket";
+                hp = 30;
+            }
+        }
+        zombies.push({
+            row: Math.floor(Math.random() * rows),
+            x: c.width - 20,
+            hp,
+            type: ztype,
+            eat: false,
+            target: null
+        });
         spawned++;
     }
 
@@ -89,13 +127,22 @@
     function update() {
         if (gameOver) return;
         tick++;
-        if (tick % 160 == 0 && spawned < MAX_Z) spawnZombie();
-        if (tick % 200 == 0) spawnSun();
 
+        // волны зомби
+        if (tick % 200 === 0 && spawned < wave * 5) {
+            spawnZombie();
+        }
+        if (tick % 300 === 0) {
+            spawnSun();
+        }
+
+        // растения
         plants.forEach(p => {
-            if (p.type === "sun" && --p.scd <= 0) {
-                suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH});
-                p.scd = 300;
+            if (p.type === "sun") {
+                if (--p.scd <= 0) {
+                    suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH});
+                    p.scd = PLANTS.sun.cd;
+                }
             }
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
                 bullets.push({x: p.col * cellW + cellW * .7, row: p.row});
@@ -103,29 +150,39 @@
             }
         });
 
+        // пули
         bullets.forEach(b => b.x += 5);
-        suns.forEach(s => s.y += .6);
 
+        // солнце падает
+        suns.forEach(s => s.y += 0.6);
+
+        // зомби
         zombies.forEach(z => {
-            if (z.eat && z.t) {
-                z.t.hp -= .03;
-                if (z.t.hp <= 0) {
-                    plants.splice(plants.indexOf(z.t), 1);
+            if (z.eat && z.target) {
+                z.target.hp -= 0.03;
+                if (z.target.hp <= 0) {
+                    plants.splice(plants.indexOf(z.target), 1);
                     z.eat = false;
-                    z.t = null;
+                    z.target = null;
                 }
             } else {
-                z.x -= .45;
+                z.x -= 0.4;
                 plants.forEach(p => {
                     const px = p.col * cellW + cellW / 2;
                     if (p.row === z.row && Math.abs(z.x - px) < 18) {
                         z.eat = true;
-                        z.t = p;
+                        z.target = p;
                     }
                 });
+                // газонокосилка
+                if (z.x <= 0 && lawnmowers[z.row].active) {
+                    zombies = zombies.filter(zz => zz.row !== z.row);
+                    lawnmowers[z.row].active = false;
+                }
             }
         });
 
+        // пули бьют зомби
         bullets.forEach((b, i) => zombies.forEach(z => {
             if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
                 z.hp--;
@@ -133,19 +190,25 @@
             }
         }));
 
-        // 1. Проверка поражения
-        if (zombies.some(z => z.x <= 0)) {
+        // удаляем мертвых
+        zombies = zombies.filter(z => z.hp > 0);
+
+        // поражение
+        if (zombies.some(z => z.x <= 0 && !lawnmowers[z.row].active)) {
             gameOver = true;
             status.innerText = "💀 Поражение";
             return;
         }
 
-        // 2. Удаляем мёртвых зомби
-        zombies = zombies.filter(z => z.hp > 0);
-
-        if (spawned === MAX_Z && zombies.length === 0) {
-            gameOver = true;
-            status.innerText = "🎉 Победа";
+        // победа и волны
+        if (spawned >= wave * 5 && zombies.length === 0) {
+            if (wave < MAX_WAVES) {
+                wave++;
+                spawned = 0;
+            } else {
+                gameOver = true;
+                status.innerText = "🎉 Победа";
+            }
         }
     }
 
@@ -185,12 +248,19 @@
             ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
             ctx.fill();
         });
-
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
             ctx.arc(s.x, s.y, 12, 0, 7);
             ctx.fill();
+        });
+
+        // рисуем газонокосилки
+        lawnmowers.forEach(l => {
+            if (l.active) {
+                ctx.fillStyle = "silver";
+                ctx.fillRect(l.x, l.row * cellH, 20, cellH - 2);
+            }
         });
 
         sunDiv.innerText = "Солнца: " + sun;
