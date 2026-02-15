@@ -12,7 +12,6 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: #87ceeb; /* временно, фон через блоки */
         }
 
         #game {
@@ -23,22 +22,20 @@
             overflow: hidden;
         }
 
-        #sky {
+        #sky, #grass {
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 50%;
-            background: #87ceeb; /* небо */
+        }
+
+        #sky {
+            top: 0;
+            background: #87ceeb;
         }
 
         #grass {
-            position: absolute;
             bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 50%;
-            background: #7ec850; /* трава */
+            background: #7ec850;
         }
 
         canvas {
@@ -51,7 +48,7 @@
         #menu {
             position: absolute;
             top: 50%;
-            left: 65%; /* сдвинуто вправо */
+            left: 65%;
             transform: translate(-50%, -50%);
             text-align: center;
             z-index: 2;
@@ -130,6 +127,7 @@
 
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
     let selectedPlant = null, shovel = false, tick = 0, wave = 1, spawned = 0, gameOver = false;
+    let gameStarted = false;
 
     const MAX_WAVES = 3;
     const PLANTS = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
@@ -198,7 +196,7 @@
     }
 
     function update() {
-        if (gameOver) return;
+        if (gameOver || !gameStarted) return;
         tick++;
 
         if (tick % 200 === 0 && spawned < wave * 5) spawnZombie();
@@ -268,7 +266,13 @@
     }
 
     function draw() {
-        ctx.clearRect(0, 0, c.width, c.height);
+        if (gameStarted) {
+            // весь фон зеленый при игре
+            ctx.fillStyle = "#7ec850";
+            ctx.fillRect(0, 0, c.width, c.height);
+        } else {
+            ctx.clearRect(0, 0, c.width, c.height);
+        }
 
         // сетка
         ctx.strokeStyle = "#5fa35f";
@@ -359,7 +363,6 @@
             ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
             ctx.fill();
         });
-
         lawnmowers.forEach(l => {
             if (l.active) {
                 ctx.fillStyle = "red";
@@ -374,6 +377,7 @@
         document.getElementById("menu").style.display = "none";
         document.getElementById("panel").style.display = "block";
         c.style.display = "block";
+        gameStarted = true;
     }
 
     (function loop() {
