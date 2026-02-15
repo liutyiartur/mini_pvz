@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>🧠 Mini PvZ</title>
+    <title>Mini PvZ Full</title>
     <style>
         body {
             background: linear-gradient(#87ceeb, #e6f3e6);
-            font-family: Arial, sans-serif;
+            font-family: Arial;
             display: flex;
             justify-content: center
         }
@@ -210,7 +210,7 @@
             ctx.stroke();
         }
 
-        // Растения с улучшенными текстурами
+        // Растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2;
             const cy = p.row * cellH + cellH / 2;
@@ -242,22 +242,32 @@
             }
         });
 
-// Зомби с симпатичным видом
+// Зомби круги с глазами и черным ртом
         zombies.forEach(z => {
             const zx = z.x;
             const zy = z.row * cellH + cellH / 2;
-            ctx.fillStyle = z.type === "bucket" ? "#555" : z.type === "cone" ? "orange" : "#999";
-            ctx.fillRect(zx - 12, zy - 20, 24, 40); // тело
-            ctx.fillStyle = "#ccc";
-            ctx.fillRect(zx - 12, zy - 30, 24, 10); // голова
+            ctx.fillStyle = z.type === "bucket" ? "#555" : z.type === "cone" ? "orange" : "#777";
+            ctx.beginPath();
+            ctx.arc(zx, zy, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            // глаза
             ctx.fillStyle = "white";
-            ctx.fillRect(zx - 8, zy - 28, 6, 6); // глаза
-            ctx.fillRect(zx + 2, zy - 28, 6, 6);
+            ctx.beginPath();
+            ctx.arc(zx - 5, zy - 4, 4, 0, Math.PI * 2);
+            ctx.arc(zx + 5, zy - 4, 4, 0, Math.PI * 2);
+            ctx.fill();
             ctx.fillStyle = "black";
-            ctx.fillRect(zx - 6, zy - 26, 2, 2);
-            ctx.fillRect(zx + 4, zy - 26, 2, 2);
-            ctx.fillStyle = "red";
-            ctx.fillRect(zx - 6, zy - 18, 12, 4); // рот
+            ctx.beginPath();
+            ctx.arc(zx - 5, zy - 4, 2, 0, Math.PI * 2);
+            ctx.arc(zx + 5, zy - 4, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // рот
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(zx, zy + 6, 6, 0, Math.PI);
+            ctx.fill();
         });
 
         bullets.forEach(b => {
@@ -273,7 +283,7 @@
             ctx.fill();
         });
 
-// Газонокосилки с текстурами
+// Газонокосилки
         lawnmowers.forEach(l => {
             if (l.active) {
                 ctx.fillStyle = "yellow";
