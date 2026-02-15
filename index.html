@@ -12,40 +12,55 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: linear-gradient(#87ceeb, #7ec850 50%);
+            background: none;
         }
 
         #game {
             text-align: center;
             position: relative;
+            width: 720px;
+            height: 360px;
+            border: 4px solid #2f6f2f;
+        }
+
+        #sky {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: #87ceeb; /* небо */
+        }
+
+        #grass {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: #7ec850; /* трава */
         }
 
         canvas {
-            background: #7ec850;
-            border: 4px solid #2f6f2f;
             display: none;
-        }
-
-        button {
-            margin: 3px;
-            padding: 6px 10px;
-        }
-
-        .active {
-            background: #ffb703
+            background: transparent;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         #menu {
             position: absolute;
             top: 50%;
-            left: 50%;
+            left: 60%; /* сдвинуто вправо */
             transform: translate(-50%, -50%);
             text-align: center;
+            z-index: 2;
         }
 
         #menu .tombstone {
-            width: 200px;
-            height: 200px;
+            width: 250px;
+            height: 250px;
             background: #888;
             border-radius: 50% 50% 0 0;
             position: relative;
@@ -61,17 +76,42 @@
             font-size: 16px;
             cursor: pointer;
         }
+
+        #panel {
+            display: none;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+        }
+
+        #sun, #status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        button.active {
+            background: #ffb703;
+        }
     </style>
 </head>
 <body>
 
 <div id="game">
+    <div id="sky"></div>
+    <div id="grass"></div>
+
     <div id="menu">
         <div class="tombstone"></div>
         <button onclick="startGame()">Играть</button>
     </div>
 
-    <div id="panel" style="display:none;">
+    <div id="panel">
         <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
         <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
         <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
@@ -337,7 +377,6 @@
         document.getElementById("sun").innerText = "Солнца: " + sun;
     }
 
-    // запуск игры после меню
     function startGame() {
         document.getElementById("menu").style.display = "none";
         document.getElementById("panel").style.display = "block";
