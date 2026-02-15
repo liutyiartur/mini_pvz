@@ -129,16 +129,6 @@
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
     <div id="result"></div>
-
-    <!-- Локальные звуки -->
-    <audio id="plantSound" src="planting.mp3"></audio>
-    <audio id="sunPickup" src="sun-pickup.mp3"></audio>
-    <audio id="peaShot" src="pea-shot.mp3"></audio>
-    <audio id="zombieEat" src="zombie-eating.mp3"></audio>
-    <audio id="spawnSound" src="zombie-appear.mp3"></audio>
-    <audio id="zombieDeath" src="zombie-death.mp3"></audio>
-    <audio id="winSound" src="victory.mp3"></audio>
-    <audio id="loseSound" src="defeat.mp3"></audio>
 </div>
 
 <script>
@@ -151,15 +141,15 @@
     const PLANTS_DATA = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
     for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
-    // Звуки
-    const plantSound = document.getElementById("plantSound");
-    const sunPickup = document.getElementById("sunPickup");
-    const peaShot = document.getElementById("peaShot");
-    const zombieEat = document.getElementById("zombieEat");
-    const spawnSound = document.getElementById("spawnSound");
-    const zombieDeath = document.getElementById("zombieDeath");
-    const winSound = document.getElementById("winSound");
-    const loseSound = document.getElementById("loseSound");
+    // Звуки через открытые ссылки
+    const plantSound = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
+    const sunPickup = new Audio("https://www.soundjay.com/button/sounds/button-3.mp3");
+    const peaShot = new Audio("https://www.soundjay.com/button/sounds/button-09.mp3");
+    const zombieEat = new Audio("https://www.soundjay.com/human/sounds/munching-1.mp3");
+    const spawnSound = new Audio("https://www.soundjay.com/button/sounds/button-10.mp3");
+    const zombieDeath = new Audio("https://www.soundjay.com/button/sounds/button-4.mp3");
+    const winSound = new Audio("https://www.soundjay.com/button/sounds/button-7.mp3");
+    const loseSound = new Audio("https://www.soundjay.com/button/sounds/button-8.mp3");
 
     function selectPlant(t) {
         selectedPlant = t;
@@ -322,7 +312,6 @@
             ctx.stroke();
         }
 
-        // растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
@@ -347,7 +336,6 @@
             }
         });
 
-        // зомби
         zombies.forEach(z => {
             const zx = z.x, zy = z.row * cellH + cellH / 2;
             ctx.fillStyle = "#777";
