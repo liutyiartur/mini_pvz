@@ -130,15 +130,15 @@
     <div id="status"></div>
     <div id="result"></div>
 
-    <!-- Звуки -->
-    <audio id="plantSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-planting-sound.mp3"></audio>
-    <audio id="sunPickup" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-sun-pickup.mp3"></audio>
-    <audio id="hitSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
-    <audio id="zombieEat" src="https://www.myinstants.com/media/sounds/pvz-zombie-eating.mp3"></audio>
-    <audio id="spawnSound" src="https://www.myinstants.com/media/sounds/zombie-appear.mp3"></audio>
-    <audio id="zombieDeath" src="https://www.myinstants.com/media/sounds/zombie-death.mp3"></audio>
-    <audio id="winSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-victory-jingle.mp3"></audio>
-    <audio id="loseSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
+    <!-- Локальные звуки -->
+    <audio id="plantSound" src="planting.mp3"></audio>
+    <audio id="sunPickup" src="sun-pickup.mp3"></audio>
+    <audio id="peaShot" src="pea-shot.mp3"></audio>
+    <audio id="zombieEat" src="zombie-eating.mp3"></audio>
+    <audio id="spawnSound" src="zombie-appear.mp3"></audio>
+    <audio id="zombieDeath" src="zombie-death.mp3"></audio>
+    <audio id="winSound" src="victory.mp3"></audio>
+    <audio id="loseSound" src="defeat.mp3"></audio>
 </div>
 
 <script>
@@ -154,7 +154,7 @@
     // Звуки
     const plantSound = document.getElementById("plantSound");
     const sunPickup = document.getElementById("sunPickup");
-    const hitSound = document.getElementById("hitSound");
+    const peaShot = document.getElementById("peaShot");
     const zombieEat = document.getElementById("zombieEat");
     const spawnSound = document.getElementById("spawnSound");
     const zombieDeath = document.getElementById("zombieDeath");
@@ -241,7 +241,7 @@
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
                 bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
                 p.cd = PLANTS_DATA.pea.cd;
-                hitSound.play();
+                peaShot.play();
             }
         });
 
@@ -275,7 +275,7 @@
                 if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
                     z.hp--;
                     bullets.splice(i, 1);
-                    hitSound.play();
+                    peaShot.play();
                     if (z.hp <= 0) zombieDeath.play();
                 }
             });
