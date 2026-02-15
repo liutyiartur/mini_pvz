@@ -48,6 +48,8 @@
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
     let selectedPlant = null, tick = 0, wave = 1, spawned = 0, gameOver = false;
 
+    const MAX_WAVES = 3;
+
     const PLANTS = {
         pea: {cost: 50, hp: 3, cd: 45},
         sun: {cost: 25, hp: 3, cd: 300},
@@ -55,16 +57,20 @@
     };
 
     // газонокосилки
-    for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
+    for (let r = 0; r < rows; r++) {
+        lawnmowers.push({row: r, x: -30, active: true});
+    }
 
     function selectPlant(t) {
         selectedPlant = t;
     }
 
     c.onclick = e => {
-        const r = c.getBoundingClientRect();
-        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const rect = c.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
+        // сбор солнца
         suns.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -73,11 +79,16 @@
         });
 
         if (!selectedPlant) return;
-        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
+        const col = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
 
-        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: 0});
+        plants.push({
+            row, col, type: selectedPlant,
+            hp: PLANTS[selectedPlant].hp,
+            cd: PLANTS[selectedPlant].cd
+        });
         sun -= PLANTS[selectedPlant].cost;
         selectedPlant = null;
     };
@@ -92,7 +103,13 @@
             type = "bucket";
             hp = 30;
         }
-        zombies.push({row: Math.floor(Math.random() * rows), x: c.width + 20, hp, type, eat: false, target: null});
+
+        zombies.push({
+            row: Math.floor(Math.random() * rows),
+            x: c.width + 20,
+            hp, type,
+            eat: false, target: null
+        });
         spawned++;
     }
 
@@ -134,6 +151,7 @@
                         z.target = p;
                     }
                 });
+
                 if (z.x < 0 && lawnmowers[z.row].active) {
                     zombies = zombies.filter(zz => zz.row !== z.row);
                     lawnmowers[z.row].active = false;
@@ -158,7 +176,7 @@
         }
 
         if (spawned >= wave * 5 && zombies.length === 0) {
-            if (wave < 3) {
+            if (wave < MAX_WAVES) {
                 wave++;
                 spawned = 0;
             } else {
@@ -188,74 +206,94 @@
 
         // растения
         plants.forEach(p => {
-            const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
+            const cx = p.col * cellW + cellW / 2;
+            const cy = p.row * cellH + cellH / 2;
+
             if (p.type === "pea") {
-                ctx.fillStyle = "green";
+                ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
-                ctx.arc(cx, cy, 14, 0, 7);
+                ctx.arc(cx, cy, 14, 0, Math.PI * 2);
                 ctx.fill();
             }
+
             if (p.type === "sun") {
-                ctx.fillStyle = "yellow";
+                ctx.fillStyle = "#ffd93b";
                 ctx.beginPath();
-                ctx.arc(cx, cy, 18, 0, 7);
+                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#8b5a2b";
+                ctx.beginPath();
+                ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
             }
+
             if (p.type === "nut") {
                 ctx.fillStyle = "#8b5a2b";
                 ctx.fillRect(cx - 16, cy - 16, 32, 32);
+                ctx.fillStyle = "#a66b3d";
+                ctx.fillRect(cx - 12, cy - 12, 24, 24);
             }
         });
 
-        // зомби (как на картинке)
+        // зомби
         zombies.forEach(z => {
-            const zx = z.x, zy = z.row * cellH + cellH / 2;
+            const zx = z.x;
+            const zy = z.row * cellH + cellH / 2;
 
+            // голова
             ctx.fillStyle = "#4f6f2f";
             ctx.beginPath();
-            ctx.arc(zx, zy, 18, 0, 7);
+            ctx.arc(zx, zy, 18, 0, Math.PI * 2);
             ctx.fill();
 
+            // глаз
             ctx.fillStyle = "white";
             ctx.beginPath();
-            ctx.arc(zx + 4, zy - 4, 5, 0, 7);
+            ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = "black";
             ctx.beginPath();
-            ctx.arc(zx + 5, zy - 4, 2, 0, 7);
+            ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
             ctx.fill();
 
+            // ЧЕРНЫЙ рот
+            ctx.fillStyle = "black";
             ctx.beginPath();
             ctx.moveTo(zx - 10, zy + 6);
             ctx.lineTo(zx + 6, zy + 10);
             ctx.lineTo(zx - 10, zy + 12);
             ctx.fill();
 
+            // конус
             if (z.type === "cone") {
                 ctx.fillStyle = "orange";
                 ctx.beginPath();
-                ctx.moveTo(zx - 18, zy - 18);
-                ctx.lineTo(zx + 18, zy - 18);
-                ctx.lineTo(zx, zy - 45);
+                ctx.moveTo(zx - 18, zy - 12);
+                ctx.lineTo(zx + 18, zy - 12);
+                ctx.lineTo(zx, zy - 42);
                 ctx.fill();
             }
+
+            // ведро (опущено вниз)
             if (z.type === "bucket") {
                 ctx.fillStyle = "#888";
-                ctx.fillRect(zx - 16, zy - 40, 32, 18);
+                ctx.fillRect(zx - 16, zy - 30, 32, 26);
+                ctx.fillStyle = "#666";
+                ctx.fillRect(zx - 18, zy - 32, 36, 4);
             }
         });
 
         bullets.forEach(b => {
             ctx.fillStyle = "yellow";
             ctx.beginPath();
-            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
             ctx.fill();
         });
 
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
-            ctx.arc(s.x, s.y, 12, 0, 7);
+            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
             ctx.fill();
         });
 
