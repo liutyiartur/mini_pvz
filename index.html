@@ -133,11 +133,16 @@
             }
         }));
 
-        zombies = zombies.filter(z => z.hp > 0 && z.x > 0);
+        // 1. Проверка поражения
         if (zombies.some(z => z.x <= 0)) {
             gameOver = true;
             status.innerText = "💀 Поражение";
+            return;
         }
+
+        // 2. Удаляем мёртвых зомби
+        zombies = zombies.filter(z => z.hp > 0);
+
         if (spawned === MAX_Z && zombies.length === 0) {
             gameOver = true;
             status.innerText = "🎉 Победа";
