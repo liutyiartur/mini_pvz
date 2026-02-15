@@ -3,100 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <title>Mini PvZ</title>
-
     <style>
         body {
             margin: 0;
-            background: #8b5a2b;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            background: #8b5a2b;
             font-family: Arial;
         }
 
         #game {
+            position: relative;
             width: 720px;
             height: 360px;
-            position: relative;
             border: 4px solid #2f6f2f;
             overflow: hidden;
-            background: #7ec850;
         }
 
-        /* меню */
         #sky {
             position: absolute;
             top: 0;
-            width: 100%;
             height: 50%;
+            width: 100%;
             background: #87ceeb;
         }
 
         #grass {
             position: absolute;
             bottom: 0;
-            width: 100%;
             height: 50%;
+            width: 100%;
             background: #7ec850;
-        }
-
-        #menu {
-            position: absolute;
-            left: 65%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-
-        .tombstone {
-            width: 220px;
-            height: 260px;
-            background: #999;
-            border-radius: 50% 50% 0 0;
-        }
-
-        #menu button {
-            margin-top: -140px;
-            padding: 12px 24px;
-            font-size: 18px;
-            cursor: pointer;
         }
 
         canvas {
             display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 65%;
+            transform: translate(-50%, -50%);
+        }
+
+        .tombstone {
+            width: 200px;
+            height: 250px;
+            background: #888;
+            border-radius: 50% 50% 0 0;
+            position: relative;
+        }
+
+        #menu button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
         }
 
         #panel {
             display: none;
             position: absolute;
-            top: 5px;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10;
-        }
-
-        button {
-            margin: 2px;
-            padding: 4px 8px;
-        }
-
-        button.active {
-            background: #ffb703;
+            z-index: 3;
         }
 
         #sun {
             position: absolute;
-            right: 5px;
-            top: 5px;
-            background: #e0c38a;
+            top: 10px;
+            right: 10px;
+            background: white;
             padding: 4px 8px;
             border-radius: 4px;
         }
 
         #result {
             position: absolute;
-            bottom: 5px;
+            bottom: 10px;
             width: 100%;
             text-align: center;
             font-size: 24px;
@@ -107,7 +99,6 @@
 
 <body>
 <div id="game">
-
     <div id="sky"></div>
     <div id="grass"></div>
 
@@ -117,255 +108,163 @@
     </div>
 
     <div id="panel">
-        <button onclick="selectPlant('pea')">🌱 Горох</button>
-        <button onclick="selectPlant('sun')">🌻 Подсолнух</button>
-        <button onclick="selectPlant('nut')">🥜 Орех</button>
-        <button id="shovelBtn" onclick="selectShovel()">🪓</button>
+        <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
+        <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
+        <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
     </div>
 
     <canvas id="c" width="720" height="360"></canvas>
     <div id="sun">Солнца: 100</div>
     <div id="result"></div>
+</div>
 
-    <!-- ЗВУКИ (РАБОЧИЕ mp3) -->
-    <audio id="sndPlant" src="https://www.myinstants.com/media/sounds/pvz-plant.mp3"></audio>
-    <audio id="sndSun" src="https://www.myinstants.com/media/sounds/pvz-sun.mp3"></audio>
-    <audio id="sndShoot" src="https://www.myinstants.com/media/sounds/pvz-peashoot.mp3"></audio>
-    <audio id="sndSpawn" src="https://www.myinstants.com/media/sounds/pvz-zombie-coming.mp3"></audio>
-    <audio id="sndEat" src="https://www.myinstants.com/media/sounds/pvz-zombie-eat.mp3"></audio>
-    <audio id="sndDie" src="https://www.myinstants.com/media/sounds/pvz-zombie-death.mp3"></audio>
+<script>
+    const c = document.getElementById("c"), ctx = c.getContext("2d");
+    const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
 
-    <script>
-        const c = document.getElementById("c"), ctx = c.getContext("2d");
-        const rows = 3, cols = 7;
-        const cellW = c.width / cols, cellH = c.height / rows;
+    let sun = 100, plants = [], zombies = [], bullets = [], sunsArr = [];
+    let selectedPlant = null, gameStarted = false, gameOver = false, tick = 0;
 
-        let sun = 100, plants = [], zombies = [], bullets = [], suns = [];
-        let selectedPlant = null, shovel = false;
-        let tick = 0, spawned = 0, wave = 1;
-        let gameStarted = false, gameOver = false;
+    const PLANTS = {
+        pea: {cost: 50, hp: 3, cd: 45},
+        sun: {cost: 25, hp: 3, cd: 720}, // ⬅️ реже производит солнце
+        nut: {cost: 25, hp: 20}
+    };
 
-        const PLANTS = {
-            pea: {cost: 50, hp: 3, cd: 45},
-            sun: {cost: 25, hp: 3, cd: 300},
-            nut: {cost: 25, hp: 20}
-        };
+    function selectPlant(t) {
+        selectedPlant = t;
+    }
 
-        // звуки
-        const sndPlant = plantSound = sndPlantEl = document.getElementById("sndPlant");
-        const sndSun = document.getElementById("sndSun");
-        const sndShoot = document.getElementById("sndShoot");
-        const sndSpawn = document.getElementById("sndSpawn");
-        const sndEat = document.getElementById("sndEat");
-        const sndDie = document.getElementById("sndDie");
+    c.onclick = e => {
+        if (!gameStarted) return;
+        const r = c.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
 
-        function unlockSounds() {
-            [sndPlant, sndSun, sndShoot, sndSpawn, sndEat, sndDie].forEach(s => {
-                s.volume = 0.6;
-                s.play().then(() => s.pause()).catch(() => {
-                });
-            });
-        }
-
-        function startGame() {
-            unlockSounds();
-            document.getElementById("menu").style.display = "none";
-            document.getElementById("sky").style.display = "none";
-            document.getElementById("grass").style.display = "none";
-            document.getElementById("panel").style.display = "block";
-            c.style.display = "block";
-            gameStarted = true;
-        }
-
-        function selectPlant(t) {
-            selectedPlant = t;
-            shovel = false;
-            shovelBtn.classList.remove("active");
-        }
-
-        function selectShovel() {
-            shovel = true;
-            selectedPlant = null;
-            shovelBtn.classList.add("active");
-        }
-
-        c.onclick = e => {
-            if (!gameStarted || gameOver) return;
-            const r = c.getBoundingClientRect();
-            const x = e.clientX - r.left, y = e.clientY - r.top;
-            const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
-
-            suns.forEach((s, i) => {
-                if (Math.hypot(s.x - x, s.y - y) < 15) {
-                    sun += 25;
-                    suns.splice(i, 1);
-                    sndSun.play();
-                }
-            });
-
-            if (shovel) {
-                plants = plants.filter(p => !(p.row === row && p.col === col));
-                shovel = false;
-                shovelBtn.classList.remove("active");
-                return;
+        sunsArr.forEach((s, i) => {
+            if (Math.hypot(s.x - x, s.y - y) < 15) {
+                sun += 25;
+                sunsArr.splice(i, 1);
             }
+        });
 
-            if (!selectedPlant) return;
-            if (plants.some(p => p.row === row && p.col === col)) return;
-            if (sun < PLANTS[selectedPlant].cost) return;
+        if (!selectedPlant) return;
+        if (plants.some(p => p.row === row && p.col === col)) return;
+        if (sun < PLANTS[selectedPlant].cost) return;
 
-            plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
-            sun -= PLANTS[selectedPlant].cost;
-            sndPlant.play();
-            selectedPlant = null;
-        };
+        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
+        sun -= PLANTS[selectedPlant].cost;
+        selectedPlant = null;
+    };
 
-        function spawnZombie() {
-            sndSpawn.play();
-            zombies.push({row: Math.floor(Math.random() * rows), x: c.width + 20, hp: 9});
-            spawned++;
-        }
+    function spawnSun() {
+        const col = Math.floor(Math.random() * cols);
+        const row = Math.floor(Math.random() * rows);
+        sunsArr.push({
+            col, row,
+            x: col * cellW + cellW / 2,
+            y: -20,
+            targetY: row * cellH + cellH / 2,
+            falling: true
+        });
+    }
 
-        function update() {
-            if (!gameStarted || gameOver) return;
-            tick++;
+    function update() {
+        if (!gameStarted || gameOver) return;
+        tick++;
 
-            if (tick % 200 === 0 && spawned < wave * 5) spawnZombie();
-            if (tick % 300 === 0) suns.push({x: Math.random() * c.width, y: -20});
+        if (tick % 400 === 0) spawnSun();
 
-            plants.forEach(p => {
-                if (p.type === "sun" && --p.cd <= 0) {
-                    suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH});
-                    p.cd = PLANTS.sun.cd;
-                }
-                if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
-                    bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
-                    sndShoot.play();
-                    p.cd = PLANTS.pea.cd;
-                }
-            });
-
-            bullets.forEach(b => b.x += 5);
-            suns.forEach(s => s.y += 0.6);
-
-            zombies.forEach(z => {
-                z.x -= 0.3;
-                plants.forEach(p => {
-                    const px = p.col * cellW + cellW / 2;
-                    if (p.row === z.row && Math.abs(z.x - px) < 18) {
-                        p.hp -= 0.05;
-                        sndEat.play();
-                        if (p.hp <= 0) plants.splice(plants.indexOf(p), 1);
-                    }
+        plants.forEach(p => {
+            if (p.type === "sun" && --p.cd <= 0) {
+                sunsArr.push({
+                    col: p.col, row: p.row,
+                    x: p.col * cellW + cellW / 2,
+                    y: p.row * cellH - 20,
+                    targetY: p.row * cellH + cellH / 2,
+                    falling: true
                 });
-            });
-
-            bullets.forEach((b, i) => {
-                zombies.forEach(z => {
-                    if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
-                        z.hp--;
-                        bullets.splice(i, 1);
-                        if (z.hp <= 0) sndDie.play();
-                    }
-                });
-            });
-
-            zombies = zombies.filter(z => z.hp > 0);
-
-            if (zombies.some(z => z.x < 0)) {
-                gameOver = true;
-                result.innerText = "Ты проиграл!";
-                result.style.color = "red";
+                p.cd = PLANTS.sun.cd;
             }
-        }
+        });
 
-        function draw() {
+        sunsArr.forEach(s => {
+            if (s.falling) {
+                s.y += 1.2;
+                if (s.y >= s.targetY) {
+                    s.y = s.targetY;
+                    s.falling = false;
+                }
+            }
+        });
+    }
+
+    function draw() {
+        if (gameStarted) {
             ctx.fillStyle = "#7ec850";
             ctx.fillRect(0, 0, c.width, c.height);
-
-            ctx.strokeStyle = "rgba(0,0,0,0.15)";
-            for (let i = 0; i <= rows; i++) {
-                ctx.beginPath();
-                ctx.moveTo(0, i * cellH);
-                ctx.lineTo(c.width, i * cellH);
-                ctx.stroke();
-            }
-            for (let i = 0; i <= cols; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * cellW, 0);
-                ctx.lineTo(i * cellW, c.height);
-                ctx.stroke();
-            }
-
-            plants.forEach(p => {
-                const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
-                if (p.type === "pea") {
-                    ctx.fillStyle = "green";
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                if (p.type === "sun") {
-                    ctx.fillStyle = "yellow";
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = "brown";
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                if (p.type === "nut") {
-                    ctx.fillStyle = "#8b5a2b";
-                    ctx.fillRect(cx - 16, cy - 16, 32, 32);
-                }
-            });
-
-            zombies.forEach(z => {
-                const zx = z.x, zy = z.row * cellH + cellH / 2;
-                ctx.fillStyle = "#6b8e23";
-                ctx.beginPath();
-                ctx.arc(zx, zy, 18, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = "white";
-                ctx.beginPath();
-                ctx.arc(zx - 5, zy - 5, 4, 0, Math.PI * 2);
-                ctx.arc(zx + 5, zy - 5, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = "black";
-                ctx.beginPath();
-                ctx.arc(zx - 5, zy - 5, 2, 0, Math.PI * 2);
-                ctx.arc(zx + 5, zy - 5, 2, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillRect(zx - 6, zy + 6, 12, 4);
-            });
-
-            bullets.forEach(b => {
-                ctx.fillStyle = "green";
-                ctx.beginPath();
-                ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            suns.forEach(s => {
-                ctx.fillStyle = "orange";
-                ctx.beginPath();
-                ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            sun.innerText = "Солнца: " + sun;
         }
 
-        (function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        })();
-    </script>
-</div>
+        ctx.strokeStyle = "#6aa84f";
+        for (let i = 0; i <= rows; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, i * cellH);
+            ctx.lineTo(c.width, i * cellH);
+            ctx.stroke();
+        }
+        for (let i = 0; i <= cols; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * cellW, 0);
+            ctx.lineTo(i * cellW, c.height);
+            ctx.stroke();
+        }
+
+        plants.forEach(p => {
+            const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
+            if (p.type === "pea") {
+                ctx.fillStyle = "#2f8f2f";
+                ctx.beginPath();
+                ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            if (p.type === "sun") {
+                ctx.fillStyle = "#ffd93b";
+                ctx.beginPath();
+                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#8b5a2b";
+                ctx.beginPath();
+                ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            if (p.type === "nut") {
+                ctx.fillStyle = "#8b5a2b";
+                ctx.fillRect(cx - 16, cy - 16, 32, 32);
+            }
+        });
+
+        sunsArr.forEach(s => {
+            ctx.fillStyle = "orange";
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        document.getElementById("sun").innerText = "Солнца: " + sun;
+    }
+
+    function startGame() {
+        document.getElementById("menu").style.display = "none";
+        document.getElementById("panel").style.display = "block";
+        c.style.display = "block";
+        gameStarted = true;
+    }
+
+    (function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    })();
+</script>
 </body>
 </html>
