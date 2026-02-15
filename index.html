@@ -71,10 +71,10 @@
     </div>
 
     <div id="panel">
-        <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
-        <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
-        <button onclick="selectPlant('nut')">🥜 Орех (50)</button>
-        <button id="shovelBtn" onclick="selectShovel()">🪓 Лопата</button>
+        <button onclick="selectPlant('pea', this)">🌱 Горох (50)</button>
+        <button onclick="selectPlant('sun', this)">🌻 Подсолнух (25)</button>
+        <button onclick="selectPlant('nut', this)">🥜 Орех (50)</button>
+        <button onclick="selectShovel(this)">🪓 Лопата</button>
     </div>
 
     <canvas id="c" width="720" height="360"></canvas>
@@ -117,25 +117,35 @@
         c.style.display = "block";
         gameStarted = true;
 
-        // разблокировка аудио
         Object.values(sounds).forEach(s => s.play().then(() => s.pause()).catch(() => {
         }));
     }
 
-    function selectPlant(t) {
-        selectedPlant = t;
-        shovel = false;
-        document.getElementById("shovelBtn").classList.remove("active");
+    function clearActive() {
+        document.querySelectorAll("#panel button").forEach(b => {
+            b.classList.remove("active");
+        });
     }
 
-    function selectShovel() {
+    function selectPlant(type, btn) {
+        clearActive();
+        btn.classList.add("active");
+
+        selectedPlant = type;
+        shovel = false;
+    }
+
+    function selectShovel(btn) {
+        clearActive();
+        btn.classList.add("active");
+
         shovel = true;
         selectedPlant = null;
-        document.getElementById("shovelBtn").classList.add("active");
     }
 
     c.onclick = e => {
         if (!gameStarted || gameOver) return;
+
         const r = c.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
         const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
@@ -151,8 +161,6 @@
         if (shovel) {
             const i = plants.findIndex(p => p.row === row && p.col === col);
             if (i !== -1) plants.splice(i, 1);
-            shovel = false;
-            document.getElementById("shovelBtn").classList.remove("active");
             return;
         }
 
@@ -203,15 +211,9 @@
                 p.cd = PLANTS.sun.cd;
             }
             if (p.type === "pea") {
-                const zombieAhead = zombies.some(z =>
-                    z.row === p.row && z.x > p.col * cellW
-                );
-
+                const zombieAhead = zombies.some(z => z.row === p.row && z.x > p.col * cellW);
                 if (zombieAhead && --p.cd <= 0) {
-                    bullets.push({
-                        x: p.col * cellW + cellW * 0.7,
-                        row: p.row
-                    });
+                    bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
                     playSound("shoot");
                     p.cd = PLANTS.pea.cd;
                 }
@@ -224,23 +226,33 @@
         });
 
         zombies.forEach(z => {
-            if (z.eat && z.target) {
-                z.target.hp -= 0.03;
-                if (z.target.hp <= 0) {
-                    plants.splice(plants.indexOf(z.target), 1);
+            if (z.eat) {
+                if (z.target && plants.includes(z.target)) {
+                    z.target.hp -= 0.03;
+
+                    if (z.target.hp <= 0) {
+                        plants.splice(plants.indexOf(z.target), 1);
+                        z.eat = false;
+                        z.target = null;
+                    }
+                } else {
                     z.eat = false;
                     z.target = null;
                 }
             } else {
                 z.x -= 0.35;
-                plants.forEach(p => {
+
+                const plantInFront = plants.find(p => {
                     const px = p.col * cellW + cellW / 2;
-                    if (p.row === z.row && Math.abs(z.x - px) < 18) {
-                        z.eat = true;
-                        z.target = p;
-                    }
+                    return p.row === z.row && Math.abs(z.x - px) < 18;
                 });
+
+                if (plantInFront) {
+                    z.eat = true;
+                    z.target = plantInFront;
+                }
             }
+
             if (z.x < 0) {
                 gameOver = true;
                 playSound("lose");
@@ -310,11 +322,9 @@
 
         zombies.forEach(z => {
             const zy = z.row * cellH + cellH / 2;
-
             if (z.type === "normal") ctx.fillStyle = "#777";
             if (z.type === "cone") ctx.fillStyle = "#ff9800";
             if (z.type === "bucket") ctx.fillStyle = "#9e9e9e";
-
             ctx.beginPath();
             ctx.arc(z.x, zy, 18, 0, Math.PI * 2);
             ctx.fill();
@@ -326,6 +336,7 @@
             ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
             ctx.fill();
         });
+
         sunsArr.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
