@@ -94,8 +94,8 @@
 
     const PLANTS = {
         pea: {cost: 50, hp: 3, cd: 60},
-        sun: {cost: 25, hp: 3, cd: 900},
-        nut: {cost: 50, hp: 25}
+        sun: {cost: 25, hp: 3, cd: 600},
+        nut: {cost: 25, hp: 22}
     };
 
     const sounds = {
@@ -165,16 +165,25 @@
     };
 
     function spawnZombie() {
-        let type = "normal", hp = 6;
+        let type = "normal", hp = 9;
+
         if (Math.random() < 0.4) {
             type = "cone";
-            hp = 12;
+            hp = 18;
         }
         if (Math.random() < 0.2) {
             type = "bucket";
-            hp = 20;
+            hp = 30;
         }
-        zombies.push({row: Math.floor(Math.random() * rows), x: c.width + 20, hp, type, eat: false, target: null});
+
+        zombies.push({
+            row: Math.floor(Math.random() * rows),
+            x: c.width + 20,
+            hp,
+            type,
+            eat: false,
+            target: null
+        });
     }
 
     function update() {
@@ -193,10 +202,19 @@
                 sunsArr.push({x: p.col * cellW + cellW / 2, y: p.row * cellH, targetY: p.row * cellH + cellH * 0.65});
                 p.cd = PLANTS.sun.cd;
             }
-            if (p.type === "pea" && --p.cd <= 0) {
-                bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
-                playSound("shoot");
-                p.cd = PLANTS.pea.cd;
+            if (p.type === "pea") {
+                const zombieAhead = zombies.some(z =>
+                    z.row === p.row && z.x > p.col * cellW
+                );
+
+                if (zombieAhead && --p.cd <= 0) {
+                    bullets.push({
+                        x: p.col * cellW + cellW * 0.7,
+                        row: p.row
+                    });
+                    playSound("shoot");
+                    p.cd = PLANTS.pea.cd;
+                }
             }
         });
 
@@ -241,6 +259,12 @@
                 }
             });
         });
+
+        if (tick > 3000 && zombies.length === 0) {
+            gameOver = true;
+            document.getElementById("result").innerText = "ПОБЕДА 🏆";
+            document.getElementById("result").style.color = "green";
+        }
     }
 
     function draw() {
@@ -286,7 +310,11 @@
 
         zombies.forEach(z => {
             const zy = z.row * cellH + cellH / 2;
-            ctx.fillStyle = "#777";
+
+            if (z.type === "normal") ctx.fillStyle = "#777";
+            if (z.type === "cone") ctx.fillStyle = "#ff9800";
+            if (z.type === "bucket") ctx.fillStyle = "#9e9e9e";
+
             ctx.beginPath();
             ctx.arc(z.x, zy, 18, 0, Math.PI * 2);
             ctx.fill();
