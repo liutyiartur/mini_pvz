@@ -45,61 +45,27 @@
 </div>
 
 <script>
-    // canvas
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
-
-    // ресурсы
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
     let selectedPlant = null, tick = 0, wave = 1, spawned = 0, gameOver = false;
+
     const MAX_WAVES = 3;
-
     const PLANTS = {
-        pea: {
-            cost: 50,
-            hp: 3,
-            shoot: true,
-            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABhElEQVQ4T5WTT0vDQBSGXx2k1kJAkRMBGJCHGpoRguwC6YQLCThwE2cAluAQLvIF7oBhzxB/Qm0JGBzMqZ3nZ33HnPlpnDl+f48z8eQDzCwBYBpoBvAFmABsAGKADbzxvxd+6r6+4EhDZwA+4GLAtIB7Vd9lkCngAD4AY8AZU1V4AY8AI8CywV+8l8O4Ue1kAMd64HAKlwG4grfI0AAuV1VwAI4EAY0ru43E9c9QAhcAqMYMkoV8BD4AUJgR4CyW+wA5gMHhwf6hnzAc/Mv38C7F4y6L1xHlz0U4Q9FVJbL2u+XkzxwAu4AJgC3AY4Bh4FfAWMx2YfYjT5/iB+4qG+pINiXvT6wXgPZB5HPF1IHoV/8F2bUMd/VEAGvhhYm6Xgyo6Aw9k3i4rGWevhxWj74f4uXw5w+eNCPtU6u4NLLT8V+wg4AAAAASUVORK5CYII="
-        },
-        sun: {
-            cost: 25,
-            hp: 3,
-            shoot: false,
-            produce: true,
-            cd: 300,
-            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABgklEQVQ4T5WTT0sDQRSGv+/IqKQsmAgIlo2EgSx8BkiMiAZSklYQBC0T+g+MhuUOwWLR3EXEGk7AwUiyJEs9ySCEldpNJE3EtrGxE7d17x7eZzB/3ccq2Yj3HuBnjGAkYj0M93Y6nXhGQf5+Z5G2duZk3k8Shm0uAKWZ0VQJWhA1tFskOehBVotN0o3y8zqlQWtrABu8W5c0QF6BoTSyK+gKv7pW1ZzWkVQUQB+iX/1eBqDGJkppcLKn7XJq3/d+oRRKwhQd9cK1qjsQq9rpihNwb6qVajzvJwC2xVtrT7+zwjdz5B7hPn0u+H4z6kntgAd9hs2Nyyj+hZ76iN+DKyvAqZg5Hk2nqF/4Bp1yX4i3jv3AAAAAElFTkSuQmCC"
-        },
-        nut: {
-            cost: 25,
-            hp: 22,
-            shoot: false,
-            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABeElEQVQ4T5WTz0tCURiGv+/zGsgkULCQloyFi2uQGawhIQkxZCzqC4nBiNKbYxBBYCAqJbBVEhQhXwAKfBcn+P2keYxW0lCxfDKX7d3R8L/+2t+77lYwQ+M+AMALZcd0D4Aa6WvS+G0fYjAwAuQAGwCzYDWYBpkHedwhJq7x3cA+Ib4CUyyZAG+gJ/AlfhX4Dw1xj8B9X5aPoD+R3G8v+5zp+gMsvsI7QIYg4LrCjgAe7x9DnITuB2Mhi8Ow1hNv1eC7I5FgA02pj1iCh4qDsC+B90mhXSkHhqcM2DGlAlxPLuGNshhgbhCEciymYhFHCsbCuQqFVGnq5i7lwQfG9k4XGKy7bMC2X3Bv28IB+Ab93WnJexWhmZbZ+Ege34BmjN+YDZs6mnVqkNAAAAAElFTkSuQmCC"
-        }
+        pea: {cost: 50, hp: 3, shoot: true},
+        sun: {cost: 25, hp: 3, shoot: false, produce: true, cd: 300},
+        nut: {cost: 25, hp: 22, shoot: false}
     };
 
-    // зомби
-    const ZOMBIES = {
-        normal: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
-        cone: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABGElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
-        bucket: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
-    };
-
-    // газонокосилка, пуля, солнце
-    const LAWNMOWER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAIklEQVQ4T2NkoBAwUqifw3EDgYGBgYGCAbGBoY6MAgAE/wP0MU5ljgAAAABJRU5ErkJggg==";
-    const BULLET_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAOCAYAAAA3A+DjAAAAKElEQVQoz2NkoBAwUqifQwMDAyMjIxMTAwMDAwMjIyMDFw0GJZCUGAAAKxRF0vE3S7AAAAAElFTkSuQmCC";
-    const SUN_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABTklEQVQ4T2NkoBAwUqifw3EDgYGBgYGCAbGBoY6MAgAE/wP0MU5ljgAAAABJRU5ErkJggg==";
-
-    // газонокосилки по рядам
+    // Газонокосилки
     for (let r = 0; r < rows; r++) {
         lawnmowers.push({row: r, x: -20, active: true});
     }
 
-    // выбор растения
     function selectPlant(type) {
         selectedPlant = type;
     }
 
-    // клик
     c.onclick = e => {
         const rect = c.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -112,7 +78,8 @@
             }
         });
         if (!selectedPlant) return;
-        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
+        const col = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
         plants.push({
@@ -127,20 +94,16 @@
         selectedPlant = null;
     };
 
-    // зомби
+    // Зомби волны
     function spawnZombie() {
         let ztype = "normal", hp = 9;
-        if (wave >= 2) {
-            if (Math.random() < 0.5) {
-                ztype = "cone";
-                hp = 18;
-            }
+        if (wave >= 2 && Math.random() < 0.5) {
+            ztype = "cone";
+            hp = 18;
         }
-        if (wave >= 3) {
-            if (Math.random() < 0.3) {
-                ztype = "bucket";
-                hp = 30;
-            }
+        if (wave >= 3 && Math.random() < 0.3) {
+            ztype = "bucket";
+            hp = 30;
         }
         zombies.push({
             row: Math.floor(Math.random() * rows),
@@ -153,17 +116,14 @@
         spawned++;
     }
 
-    // солнце падает
     function spawnSun() {
         suns.push({x: Math.random() * c.width, y: -20});
     }
 
-    // update
     function update() {
         if (gameOver) return;
         tick++;
 
-        // волны
         if (tick % 200 === 0 && spawned < wave * 5) {
             spawnZombie();
         }
@@ -171,7 +131,6 @@
             spawnSun();
         }
 
-        // растения
         plants.forEach(p => {
             if (p.type === "sun") {
                 if (--p.scd <= 0) {
@@ -225,7 +184,6 @@
             status.innerText = "💀 Поражение";
             return;
         }
-
         if (spawned >= wave * 5 && zombies.length === 0) {
             if (wave < MAX_WAVES) {
                 wave++;
@@ -237,7 +195,6 @@
         }
     }
 
-    // draw
     function draw() {
         ctx.clearRect(0, 0, c.width, c.height);
         ctx.strokeStyle = "#5fa35f";
@@ -254,45 +211,75 @@
             ctx.stroke();
         }
 
+        // Растения с текстурами
         plants.forEach(p => {
-            let img = new Image();
-            img.src = PLANTS[p.type].img;
-            ctx.drawImage(img, p.col * cellW + 2, p.row * cellH + 2, cellW - 4, cellH - 4);
+            if (p.type === "pea") {
+                ctx.fillStyle = "green";
+                ctx.fillRect(p.col * cellW + 6, p.row * cellH + 6, 16, 16);
+                ctx.fillStyle = "darkgreen";
+                ctx.fillRect(p.col * cellW + 10, p.row * cellH + 6, 4, 4);
+                ctx.fillRect(p.col * cellW + 10, p.row * cellH + 14, 4, 4);
+            } else if (p.type === "sun") {
+                ctx.fillStyle = "yellow";
+                ctx.beginPath();
+                ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 14, 0, 7);
+                ctx.fill();
+                ctx.fillStyle = "brown";
+                ctx.beginPath();
+                ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 6, 0, 7);
+                ctx.fill();
+            } else if (p.type === "nut") {
+                ctx.fillStyle = "#8b5a2b";
+                ctx.fillRect(p.col * cellW + 4, p.row * cellH + 4, 22, 22);
+            }
         });
 
+        // Зомби с текстурами
         zombies.forEach(z => {
-            let img = new Image();
-            img.src = ZOMBIES[z.type];
-            ctx.drawImage(img, z.x - 16, z.row * cellH, 32, cellH);
+            ctx.fillStyle = z.type === "bucket" ? "#444" : z.type === "cone" ? "orange" : "#777";
+            ctx.fillRect(z.x - 8, z.row * cellH + cellH / 2 - 16, 16, 32);
+            ctx.fillStyle = "white";
+            ctx.fillRect(z.x - 6, z.row * cellH + cellH / 2 - 12, 4, 4);
+            ctx.fillRect(z.x + 2, z.row * cellH + cellH / 2 - 12, 4, 4);
+            ctx.fillStyle = "red";
+            ctx.fillRect(z.x - 4, z.row * cellH + cellH / 2 + 6, 8, 4);
         });
 
         bullets.forEach(b => {
-            let img = new Image();
-            img.src = BULLET_IMG;
-            ctx.drawImage(img, b.x - 4, b.row * cellH + cellH / 2 - 4, 8, 8);
+            ctx.fillStyle = "yellow";
+            ctx.beginPath();
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
+            ctx.fill();
         });
         suns.forEach(s => {
-            let img = new Image();
-            img.src = SUN_IMG;
-            ctx.drawImage(img, s.x - 12, s.y - 12, 24, 24);
+            ctx.fillStyle = "orange";
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 12, 0, 7);
+            ctx.fill();
         });
+
+        // Газонокосилки с текстурами
         lawnmowers.forEach(l => {
             if (l.active) {
-                let img = new Image();
-                img.src = LAWNMOWER_IMG;
-                ctx.drawImage(img, l.x, l.row * cellH, 20, cellH - 2);
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(l.x, l.row * cellH + cellH / 4, 30, cellH / 2);
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.arc(l.x + 5, l.row * cellH + cellH * 3 / 4, 5, 0, Math.PI * 2);
+                ctx.arc(l.x + 25, l.row * cellH + cellH * 3 / 4, 5, 0, Math.PI * 2);
+                ctx.fill();
             }
         });
+
         sunDiv.innerText = "Солнца: " + sun;
     }
 
-    // запуск
+    const sunDiv = document.getElementById("sun"), status = document.getElementById("status");
     (function loop() {
         update();
         draw();
         requestAnimationFrame(loop);
     })();
-    const sunDiv = document.getElementById("sun"), status = document.getElementById("status");
 </script>
 </body>
 </html>
