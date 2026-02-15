@@ -25,6 +25,10 @@
             margin: 3px;
             padding: 6px 10px
         }
+
+        .active {
+            background: #ffb703
+        }
     </style>
 </head>
 <body>
@@ -34,6 +38,7 @@
         <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
         <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
         <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
+        <button id="shovelBtn" onclick="selectShovel()">🪓 Лопата</button>
     </div>
 
     <canvas id="c" width="720" height="360"></canvas>
@@ -46,7 +51,7 @@
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
 
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
-    let selectedPlant = null, tick = 0, wave = 1, spawned = 0, gameOver = false;
+    let selectedPlant = null, shovel = false, tick = 0, wave = 1, spawned = 0, gameOver = false;
 
     const MAX_WAVES = 3;
 
@@ -57,12 +62,18 @@
     };
 
     // газонокосилки
-    for (let r = 0; r < rows; r++) {
-        lawnmowers.push({row: r, x: -30, active: true});
-    }
+    for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
     function selectPlant(t) {
         selectedPlant = t;
+        shovel = false;
+        document.getElementById("shovelBtn").classList.remove("active");
+    }
+
+    function selectShovel() {
+        shovel = true;
+        selectedPlant = null;
+        document.getElementById("shovelBtn").classList.add("active");
     }
 
     c.onclick = e => {
@@ -78,9 +89,21 @@
             }
         });
 
-        if (!selectedPlant) return;
         const col = Math.floor(x / cellW);
         const row = Math.floor(y / cellH);
+
+        // ЛОПАТА
+        if (shovel) {
+            const idx = plants.findIndex(p => p.row === row && p.col === col);
+            if (idx !== -1) {
+                plants.splice(idx, 1);
+                shovel = false;
+                document.getElementById("shovelBtn").classList.remove("active");
+            }
+            return;
+        }
+
+        if (!selectedPlant) return;
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
 
@@ -189,7 +212,6 @@
     function draw() {
         ctx.clearRect(0, 0, c.width, c.height);
 
-        // сетка
         ctx.strokeStyle = "#5fa35f";
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
@@ -204,7 +226,6 @@
             ctx.stroke();
         }
 
-        // растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2;
             const cy = p.row * cellH + cellH / 2;
@@ -212,88 +233,49 @@
             if (p.type === "pea") {
                 ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
-                ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+                ctx.arc(cx, cy, 14, 0, 7);
                 ctx.fill();
             }
-
             if (p.type === "sun") {
                 ctx.fillStyle = "#ffd93b";
                 ctx.beginPath();
-                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                ctx.arc(cx, cy, 20, 0, 7);
                 ctx.fill();
                 ctx.fillStyle = "#8b5a2b";
                 ctx.beginPath();
-                ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+                ctx.arc(cx, cy, 10, 0, 7);
                 ctx.fill();
             }
-
             if (p.type === "nut") {
                 ctx.fillStyle = "#8b5a2b";
                 ctx.fillRect(cx - 16, cy - 16, 32, 32);
-                ctx.fillStyle = "#a66b3d";
-                ctx.fillRect(cx - 12, cy - 12, 24, 24);
             }
         });
 
-        // зомби
         zombies.forEach(z => {
-            const zx = z.x;
-            const zy = z.row * cellH + cellH / 2;
-
-            // голова
+            const zx = z.x, zy = z.row * cellH + cellH / 2;
             ctx.fillStyle = "#4f6f2f";
             ctx.beginPath();
-            ctx.arc(zx, zy, 18, 0, Math.PI * 2);
+            ctx.arc(zx, zy, 18, 0, 7);
             ctx.fill();
-
-            // глаз
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "black";
-            ctx.beginPath();
-            ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // ЧЕРНЫЙ рот
             ctx.fillStyle = "black";
             ctx.beginPath();
             ctx.moveTo(zx - 10, zy + 6);
             ctx.lineTo(zx + 6, zy + 10);
             ctx.lineTo(zx - 10, zy + 12);
             ctx.fill();
-
-            // конус
-            if (z.type === "cone") {
-                ctx.fillStyle = "orange";
-                ctx.beginPath();
-                ctx.moveTo(zx - 18, zy - 12);
-                ctx.lineTo(zx + 18, zy - 12);
-                ctx.lineTo(zx, zy - 42);
-                ctx.fill();
-            }
-
-            // ведро (опущено вниз)
-            if (z.type === "bucket") {
-                ctx.fillStyle = "#888";
-                ctx.fillRect(zx - 16, zy - 30, 32, 26);
-                ctx.fillStyle = "#666";
-                ctx.fillRect(zx - 18, zy - 32, 36, 4);
-            }
         });
 
         bullets.forEach(b => {
             ctx.fillStyle = "yellow";
             ctx.beginPath();
-            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
             ctx.fill();
         });
-
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
-            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
+            ctx.arc(s.x, s.y, 12, 0, 7);
             ctx.fill();
         });
 
