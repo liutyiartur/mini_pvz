@@ -1,0 +1,47 @@
+# Git
+.git
+.gitattributes
+gh-pages/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.local
+
+# Composer
+vendor/
+#composer.lock
+
+# Vite/Node.js/Build artifacts
+node_modules/
+dist/
+public/dist/
+.vite/
+.cache/
+
+# IDE and files
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+.DS_Store/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!/.env.example
+
+# Tests
+test/
