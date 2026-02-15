@@ -84,6 +84,11 @@
 </div>
 
 <script>
+    let waveStage = 1;
+    let totalZombies = 30;
+    let zombiesSpawned = 0;
+    let spawnDelay = 120;
+
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7;
     const cellW = c.width / cols, cellH = c.height / rows;
@@ -97,6 +102,8 @@
         sun: {cost: 25, hp: 3, cd: 600},
         nut: {cost: 25, hp: 22}
     };
+
+    const zombiePool = [];
 
     const sounds = {
         shoot: new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
@@ -116,6 +123,7 @@
         document.getElementById("panel").style.display = "block";
         c.style.display = "block";
         gameStarted = true;
+        prepareZombies();
 
         Object.values(sounds).forEach(s => s.play().then(() => s.pause()).catch(() => {
         }));
@@ -173,16 +181,14 @@
     };
 
     function spawnZombie() {
-        let type = "normal", hp = 9;
 
-        if (Math.random() < 0.4) {
-            type = "cone";
-            hp = 18;
-        }
-        if (Math.random() < 0.2) {
-            type = "bucket";
-            hp = 30;
-        }
+        if (zombiePool.length === 0) return;
+
+        const type = zombiePool.shift();
+
+        let hp = 5;
+        if (type === "cone") hp = 18;
+        if (type === "bucket") hp = 25;
 
         zombies.push({
             row: Math.floor(Math.random() * rows),
@@ -192,13 +198,63 @@
             eat: false,
             target: null
         });
+
+        zombiesSpawned++;
+    }
+
+    function prepareZombies() {
+
+        zombiePool.length = 0;
+
+        const normalCount = Math.floor(totalZombies * 0.66);
+        const coneCount = Math.floor(totalZombies * 0.28);
+        const bucketCount = Math.max(2, Math.floor(totalZombies * 0.06)); // максимум 6%
+
+        const stage1Count = Math.floor(totalZombies * 0.33);
+        const stage2Count = Math.floor(totalZombies * 0.33);
+        const stage3Count = totalZombies - stage1Count - stage2Count;
+
+        // ЭТАП 1 — только normal
+        for (let i = 0; i < stage1Count; i++)
+            zombiePool.push("normal");
+
+        // ЭТАП 2 — normal + немного cone
+        for (let i = 0; i < stage2Count; i++) {
+            if (i % 3 === 0 && coneCount > 0) {
+                zombiePool.push("cone");
+            } else {
+                zombiePool.push("normal");
+            }
+        }
+
+        // ЭТАП 3 — всё вперемешку
+        for (let i = 0; i < stage3Count; i++) {
+
+            if (bucketCount > 0 && i % 6 === 0) {
+                zombiePool.push("bucket");
+            }
+            else if (i % 2 === 0 && coneCount > 0) {
+                zombiePool.push("cone");
+            }
+            else {
+                zombiePool.push("normal");
+            }
+        }
     }
 
     function update() {
         if (!gameStarted || gameOver) return;
         tick++;
 
-        if (tick % 300 === 0) spawnZombie();
+        if (zombiesSpawned < totalZombies) {
+            if (waveStage === 1) spawnDelay = 180;
+            if (waveStage === 2) spawnDelay = 120;
+            if (waveStage === 3) spawnDelay = 60;
+
+            if (tick % spawnDelay === 0)
+                spawnZombie();
+        }
+
         if (tick % 400 === 0) {
             const col = Math.floor(Math.random() * cols);
             const row = Math.floor(Math.random() * rows);
@@ -277,6 +333,12 @@
             document.getElementById("result").innerText = "ПОБЕДА 🏆";
             document.getElementById("result").style.color = "green";
         }
+
+        if (zombiesSpawned > totalZombies * 0.33)
+            waveStage = 2;
+
+        if (zombiesSpawned > totalZombies * 0.66)
+            waveStage = 3;
     }
 
     function draw() {
@@ -324,7 +386,7 @@
             const zy = z.row * cellH + cellH / 2;
             if (z.type === "normal") ctx.fillStyle = "#777";
             if (z.type === "cone") ctx.fillStyle = "#ff9800";
-            if (z.type === "bucket") ctx.fillStyle = "#9e9e9e";
+            if (z.type === "bucket") ctx.fillStyle = "#e60101";
             ctx.beginPath();
             ctx.arc(z.x, zy, 18, 0, Math.PI * 2);
             ctx.fill();
