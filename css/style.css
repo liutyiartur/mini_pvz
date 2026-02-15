@@ -1,0 +1,66 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #8b5a2b;
+}
+
+#game {
+    position: relative;
+    width: 720px;
+    height: 360px;
+    border: 4px solid #2f6f2f;
+    background: #7ec850;
+}
+
+canvas {
+    display: none;
+}
+
+#menu {
+    text-align: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.play {
+    font-size: 24px;
+    padding: 10px 20px;
+    border-radius: 6px;
+}
+
+#panel {
+    display: none;
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+}
+
+#sun {
+    position: absolute;
+    top: -32px;
+    right: 10px;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+#result {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+button.active {
+    background: #ffb703;
+}
