@@ -1,44 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8"/>
-    <title>Mini Plants vs Zombies</title>
+    <title>Mini Plants vs Zombies+</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #e6f3e6;
+            background: linear-gradient(#87ceeb, #e6f3e6);
             display: flex;
             justify-content: center;
         }
 
         #game {
             margin-top: 20px;
-        }
-
-        canvas {
-            background: #b7e3a1;
-            border: 3px solid #2f6f2f;
-        }
-
-        .info {
-            margin-top: 8px;
             text-align: center;
         }
 
+        canvas {
+            background: #7ec850;
+            border: 4px solid #2f6f2f;
+        }
+
         button {
-            padding: 8px 12px;
-            margin: 4px;
+            padding: 8px 14px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 <div id="game">
-    <canvas id="c" width="600" height="300"></canvas>
-    <div class="info">
-        <button onclick="addPlant()">🌱 Plant (cost 50)</button>
-        <span id="sun">Sun: 100</span>
-        <div>Click a lane to place a plant. Plants shoot automatically.</div>
-    </div>
+    <canvas id="c" width="700" height="360"></canvas>
+    <br>
+    <button onclick="addPlant()">🌱 Посадить растение (50)</button>
+    <div id="sun">Солнца: 100</div>
+    <div id="status"></div>
 </div>
 
 <script>
@@ -46,50 +41,76 @@
     const ctx = canvas.getContext('2d');
     const lanes = 3;
     const laneH = canvas.height / lanes;
+
     let sun = 100;
     let plants = [];
     let zombies = [];
     let bullets = [];
+    let suns = [];
+
+    let placing = false;
     let tick = 0;
+    let zombiesSpawned = 0;
+    const MAX_ZOMBIES = 12;
+    let gameOver = false;
 
     function addPlant() {
         placing = true;
     }
 
-    let placing = false;
     canvas.addEventListener('click', e => {
-        if (!placing || sun < 50) return;
         const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
+        // collect suns
+        suns.forEach((s, si) => {
+            if (Math.hypot(s.x - x, s.y - y) < 18) {
+                sun += 25;
+                suns.splice(si, 1);
+            }
+        });
+
+        if (!placing || sun < 50) return;
         const lane = Math.floor(y / laneH);
-        plants.push({x: 100, lane, hp: 5, cd: 0});
+        plants.push({x: 120, lane, cd: 0});
         sun -= 50;
         placing = false;
     });
 
     function spawnZombie() {
         const lane = Math.floor(Math.random() * lanes);
-        zombies.push({x: canvas.width - 20, lane, hp: 8});
+        zombies.push({x: canvas.width - 40, lane, hp: 6});
+        zombiesSpawned++;
+    }
+
+    function spawnSun() {
+        const x = Math.random() * (canvas.width - 60) + 30;
+        suns.push({x, y: -20});
     }
 
     function update() {
+        if (gameOver) return;
         tick++;
-        if (tick % 120 === 0) spawnZombie();
+
+        if (tick % 150 === 0 && zombiesSpawned < MAX_ZOMBIES) spawnZombie();
+        if (tick % 180 === 0) spawnSun();
 
         plants.forEach(p => {
             p.cd--;
             if (p.cd <= 0) {
                 bullets.push({x: p.x + 20, lane: p.lane});
-                p.cd = 40;
+                p.cd = 45;
             }
         });
 
-        bullets.forEach(b => b.x += 4);
-        zombies.forEach(z => z.x -= 0.6);
+        bullets.forEach(b => b.x += 5);
+        zombies.forEach(z => z.x -= 0.5);
+        suns.forEach(s => s.y += 0.6);
 
         bullets.forEach((b, bi) => {
             zombies.forEach((z, zi) => {
-                if (z.lane === b.lane && Math.abs(z.x - b.x) < 10) {
+                if (z.lane === b.lane && Math.abs(z.x - b.x) < 15) {
                     z.hp--;
                     bullets.splice(bi, 1);
                 }
@@ -97,39 +118,64 @@
         });
 
         zombies.forEach((z, zi) => {
-            if (z.hp <= 0) {
-                zombies.splice(zi, 1);
-                sun += 25;
-            }
-            if (z.x < 80) {
-                alert('Зомби прорвались! Игра окончена');
-                location.reload();
+            if (z.hp <= 0) zombies.splice(zi, 1);
+            if (z.x < 90) {
+                gameOver = true;
+                document.getElementById('status').innerText = "💀 Зомби прорвались!";
             }
         });
+
+        if (zombiesSpawned === MAX_ZOMBIES && zombies.length === 0) {
+            gameOver = true;
+            document.getElementById('status').innerText = "🎉 Победа! Орда отбита!";
+        }
+    }
+
+    function drawPlant(p) {
+        ctx.fillStyle = "#3a7d2f";
+        ctx.beginPath();
+        ctx.arc(p.x, p.lane * laneH + laneH / 2, 14, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawZombie(z) {
+        ctx.fillStyle = "#777";
+        ctx.beginPath();
+        ctx.arc(z.x, z.lane * laneH + laneH / 2, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#000";
+        ctx.fillRect(z.x - 6, z.lane * laneH + laneH / 2 - 4, 4, 4);
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         for (let i = 1; i < lanes; i++) {
-            ctx.strokeStyle = '#6fbf6f';
+            ctx.strokeStyle = '#5fa35f';
             ctx.beginPath();
             ctx.moveTo(0, i * laneH);
             ctx.lineTo(canvas.width, i * laneH);
             ctx.stroke();
         }
-        plants.forEach(p => {
-            ctx.fillStyle = 'green';
-            ctx.fillRect(p.x - 10, p.lane * laneH + laneH / 2 - 10, 20, 20);
-        });
-        zombies.forEach(z => {
-            ctx.fillStyle = 'gray';
-            ctx.fillRect(z.x - 10, z.lane * laneH + laneH / 2 - 12, 24, 24);
-        });
+
+        plants.forEach(drawPlant);
+        zombies.forEach(drawZombie);
+
         bullets.forEach(b => {
             ctx.fillStyle = 'yellow';
-            ctx.fillRect(b.x, b.lane * laneH + laneH / 2 - 2, 6, 4);
+            ctx.beginPath();
+            ctx.arc(b.x, b.lane * laneH + laneH / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
         });
-        document.getElementById('sun').innerText = 'Sun: ' + sun;
+
+        suns.forEach(s => {
+            ctx.fillStyle = 'orange';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        document.getElementById('sun').innerText = 'Солнца: ' + sun;
     }
 
     function loop() {
