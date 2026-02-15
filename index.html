@@ -2,49 +2,83 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Mini PvZ Full</title>
+    <title>Mini PvZ</title>
     <style>
         body {
-            background: linear-gradient(#87ceeb, #e6f3e6);
+            margin: 0;
+            padding: 0;
             font-family: Arial;
             display: flex;
             justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(#87ceeb, #7ec850 50%);
         }
 
         #game {
             text-align: center;
-            margin-top: 10px
+            position: relative;
         }
 
         canvas {
             background: #7ec850;
             border: 4px solid #2f6f2f;
+            display: none;
         }
 
         button {
             margin: 3px;
-            padding: 6px 10px
+            padding: 6px 10px;
         }
 
-        #panel {
-            margin-bottom: 5px;
+        .active {
+            background: #ffb703
         }
 
-        button.active {
-            background: #ccc;
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        #menu .tombstone {
+            width: 200px;
+            height: 200px;
+            background: #888;
+            border-radius: 50% 50% 0 0;
+            position: relative;
+            margin: auto;
+        }
+
+        #menu button {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
+
 <div id="game">
-    <div id="panel">
+    <div id="menu">
+        <div class="tombstone"></div>
+        <button onclick="startGame()">Играть</button>
+    </div>
+
+    <div id="panel" style="display:none;">
         <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
         <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
         <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
         <button id="shovelBtn" onclick="selectShovel()">🪓 Лопата</button>
     </div>
+
     <canvas id="c" width="720" height="360"></canvas>
-    <br>
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
 </div>
@@ -52,29 +86,28 @@
 <script>
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
+
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
-    let selectedPlant = null, shovel = false, tick = 0;
+    let selectedPlant = null, shovel = false, tick = 0, wave = 1, spawned = 0, gameOver = false;
 
-    // Лопата
-    const shovelBtn = document.getElementById("shovelBtn");
+    const MAX_WAVES = 3;
+    const PLANTS = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
 
-    // Газонокосилки
-    for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -20, active: true});
+    // газонокосилки
+    for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
-    // Выбор растений
-    function selectPlant(type) {
-        selectedPlant = type;
+    function selectPlant(t) {
+        selectedPlant = t;
         shovel = false;
-        shovelBtn.classList.remove("active");
+        document.getElementById("shovelBtn").classList.remove("active");
     }
 
     function selectShovel() {
         shovel = true;
         selectedPlant = null;
-        shovelBtn.classList.add("active");
+        document.getElementById("shovelBtn").classList.add("active");
     }
 
-    // Клик по canvas
     c.onclick = e => {
         const rect = c.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -82,7 +115,7 @@
         const col = Math.floor(x / cellW);
         const row = Math.floor(y / cellH);
 
-        // собрать солнце
+        // сбор солнца
         suns.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -90,72 +123,61 @@
             }
         });
 
+        // Лопата
         if (shovel) {
-            const i = plants.findIndex(p => p.row === row && p.col === col);
-            if (i != -1) plants.splice(i, 1);
-            shovel = false;
-            shovelBtn.classList.remove("active");
+            const idx = plants.findIndex(p => p.row === row && p.col === col);
+            if (idx !== -1) {
+                plants.splice(idx, 1);
+                shovel = false;
+                document.getElementById("shovelBtn").classList.remove("active");
+            }
             return;
         }
 
         if (!selectedPlant) return;
         if (plants.some(p => p.row === row && p.col === col)) return;
-        const cost = {pea: 50, sun: 25, nut: 25}[selectedPlant];
-        if (sun < cost) return;
-        plants.push({row, col, type: selectedPlant, hp: selectedPlant === "nut" ? 20 : 3, cd: 0, scd: 300});
-        sun -= cost;
+        if (sun < PLANTS[selectedPlant].cost) return;
+
+        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
+        sun -= PLANTS[selectedPlant].cost;
         selectedPlant = null;
     }
 
-    // Зомби
     function spawnZombie() {
-        let ztype = "normal";
-        let rand = Math.random();
-        if (rand < 0.3) ztype = "cone";
-        else if (rand < 0.5) ztype = "bucket";
-        let hp = ztype === "bucket" ? 30 : ztype === "cone" ? 18 : 10;
-        zombies.push({
-            row: Math.floor(Math.random() * rows),
-            x: c.width - 20,
-            hp,
-            type: ztype,
-            eat: false,
-            target: null
-        });
+        let type = "normal", hp = 9;
+        if (wave >= 2 && Math.random() < 0.5) {
+            type = "cone";
+            hp = 18;
+        }
+        if (wave >= 3 && Math.random() < 0.3) {
+            type = "bucket";
+            hp = 30;
+        }
+        zombies.push({row: Math.floor(Math.random() * rows), x: c.width + 20, hp, type, eat: false, target: null});
+        spawned++;
     }
 
-    // Солнце
-    function spawnSun() {
-        suns.push({x: Math.random() * c.width, y: -20});
-    }
-
-    // Обновление
     function update() {
+        if (gameOver) return;
         tick++;
-        if (tick % 200 === 0) spawnZombie();
-        if (tick % 300 === 0) spawnSun();
 
-        // Растения
+        if (tick % 200 === 0 && spawned < wave * 5) spawnZombie();
+        if (tick % 300 === 0) suns.push({x: Math.random() * c.width, y: -20});
+
         plants.forEach(p => {
-            if (p.type === "sun") {
-                if (--p.scd <= 0) {
-                    suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH});
-                    p.scd = 300;
-                }
+            if (p.type === "sun" && --p.cd <= 0) {
+                suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH + 20});
+                p.cd = PLANTS.sun.cd;
             }
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
-                bullets.push({x: p.col * cellW + cellW * .7, row: p.row});
-                p.cd = 45;
+                bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
+                p.cd = PLANTS.pea.cd;
             }
         });
 
-        // Пули
         bullets.forEach(b => b.x += 5);
-
-        // Солнце падает
         suns.forEach(s => s.y += 0.6);
 
-        // Зомби
         zombies.forEach(z => {
             if (z.eat && z.target) {
                 z.target.hp -= 0.03;
@@ -173,33 +195,42 @@
                         z.target = p;
                     }
                 });
-                if (z.x <= 0 && lawnmowers[z.row].active) {
+                if (z.x < 0 && lawnmowers[z.row].active) {
                     zombies = zombies.filter(zz => zz.row !== z.row);
                     lawnmowers[z.row].active = false;
                 }
             }
         });
 
-        // Пули бьют зомби
-        bullets.forEach((b, i) => zombies.forEach(z => {
-            if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
-                z.hp--;
-                bullets.splice(i, 1);
-            }
-        }));
+        bullets.forEach((b, i) => {
+            zombies.forEach(z => {
+                if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
+                    z.hp--;
+                    bullets.splice(i, 1);
+                }
+            });
+        });
         zombies = zombies.filter(z => z.hp > 0);
 
-        // Поражение
-        if (zombies.some(z => z.x <= 0 && !lawnmowers[z.row].active)) {
-            document.getElementById("status").innerText = "💀 Поражение";
+        if (zombies.some(z => z.x < 0 && !lawnmowers[z.row].active)) {
+            gameOver = true;
+            status.innerText = "💀 Поражение";
+        }
+        if (spawned >= wave * 5 && zombies.length === 0) {
+            if (wave < MAX_WAVES) {
+                wave++;
+                spawned = 0;
+            } else {
+                gameOver = true;
+                status.innerText = "🎉 Победа";
+            }
         }
     }
 
-    // Рисование
     function draw() {
         ctx.clearRect(0, 0, c.width, c.height);
 
-        // Сетка
+        // сетка
         ctx.strokeStyle = "#5fa35f";
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
@@ -214,12 +245,11 @@
             ctx.stroke();
         }
 
-        // Растения
+        // растения
         plants.forEach(p => {
-            const cx = p.col * cellW + cellW / 2;
-            const cy = p.row * cellH + cellH / 2;
+            const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
-                ctx.fillStyle = "#2f7d2f";
+                ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
                 ctx.arc(cx, cy, 14, 0, Math.PI * 2);
                 ctx.fill();
@@ -229,7 +259,7 @@
                 ctx.beginPath();
                 ctx.arc(cx, cy, 20, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = "#a86b00";
+                ctx.fillStyle = "#8b5a2b";
                 ctx.beginPath();
                 ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
@@ -240,49 +270,56 @@
             }
         });
 
-        // Зомби
+        // зомби
         zombies.forEach(z => {
-            const zy = z.row * cellH + cellH / 2;
+            const zx = z.x, zy = z.row * cellH + cellH / 2;
             ctx.fillStyle = "#4f6f2f";
             ctx.beginPath();
-            ctx.arc(z.x, zy, 18, 0, Math.PI * 2);
+            ctx.arc(zx, zy, 18, 0, Math.PI * 2);
             ctx.fill();
+
             // глаза
             ctx.fillStyle = "white";
             ctx.beginPath();
-            ctx.arc(z.x + 5, zy - 4, 5, 0, Math.PI * 2);
+            ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = "black";
             ctx.beginPath();
-            ctx.arc(z.x + 6, zy - 4, 2, 0, Math.PI * 2);
+            ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
             ctx.fill();
+
             // рот
             ctx.fillStyle = "black";
-            ctx.fillRect(z.x - 8, zy + 8, 16, 4);
-            // конус или ведро
+            ctx.beginPath();
+            ctx.moveTo(zx - 10, zy + 6);
+            ctx.lineTo(zx + 6, zy + 10);
+            ctx.lineTo(zx - 10, zy + 12);
+            ctx.fill();
+
+            // конус
             if (z.type === "cone") {
                 ctx.fillStyle = "orange";
                 ctx.beginPath();
-                ctx.moveTo(z.x - 15, zy - 18);
-                ctx.lineTo(z.x + 15, zy - 18);
-                ctx.lineTo(z.x, zy - 35);
-                ctx.closePath();
+                ctx.moveTo(zx - 18, zy - 12);
+                ctx.lineTo(zx + 18, zy - 12);
+                ctx.lineTo(zx, zy - 42);
                 ctx.fill();
             }
+            // ведро
             if (z.type === "bucket") {
-                ctx.fillStyle = "gray";
-                ctx.fillRect(z.x - 15, zy - 35, 30, 18);
+                ctx.fillStyle = "#888";
+                ctx.fillRect(zx - 16, zy - 30, 32, 26);
+                ctx.fillStyle = "#666";
+                ctx.fillRect(zx - 18, zy - 32, 36, 4);
             }
         });
 
-        // Пули
         bullets.forEach(b => {
-            ctx.fillStyle = "yellow";
+            ctx.fillStyle = "green";
             ctx.beginPath();
             ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
             ctx.fill();
         });
-        // Солнце
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
@@ -290,7 +327,21 @@
             ctx.fill();
         });
 
+        lawnmowers.forEach(l => {
+            if (l.active) {
+                ctx.fillStyle = "red";
+                ctx.fillRect(l.x, l.row * cellH + cellH / 4, 30, cellH / 2);
+            }
+        });
+
         document.getElementById("sun").innerText = "Солнца: " + sun;
+    }
+
+    // запуск игры после меню
+    function startGame() {
+        document.getElementById("menu").style.display = "none";
+        document.getElementById("panel").style.display = "block";
+        c.style.display = "block";
     }
 
     (function loop() {
