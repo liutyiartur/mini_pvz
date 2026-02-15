@@ -88,6 +88,7 @@
     let totalZombies = 30;
     let zombiesSpawned = 0;
     let spawnDelay = 120;
+    let mowers = [];
 
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7;
@@ -97,13 +98,12 @@
     let selectedPlant = null, shovel = false;
     let gameStarted = false, gameOver = false, tick = 0;
 
+    const zombiePool = [];
     const PLANTS = {
         pea: {cost: 50, hp: 3, cd: 60},
         sun: {cost: 25, hp: 3, cd: 600},
         nut: {cost: 25, hp: 22}
     };
-
-    const zombiePool = [];
 
     const sounds = {
         shoot: new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
@@ -123,10 +123,27 @@
         document.getElementById("panel").style.display = "block";
         c.style.display = "block";
         gameStarted = true;
+
+        mowers = [];
+        for (let r = 0; r < rows; r++) {
+            mowers.push({
+                row: r,
+                x: 0,
+                active: false,
+                used: false
+            });
+        }
+
         prepareZombies();
 
         Object.values(sounds).forEach(s => s.play().then(() => s.pause()).catch(() => {
         }));
+    }
+
+    function resetSelection() {
+        clearActive();
+        selectedPlant = null;
+        shovel = false;
     }
 
     function clearActive() {
@@ -168,7 +185,10 @@
 
         if (shovel) {
             const i = plants.findIndex(p => p.row === row && p.col === col);
-            if (i !== -1) plants.splice(i, 1);
+            if (i !== -1) {
+                plants.splice(i, 1);
+                resetSelection();
+            }
             return;
         }
 
@@ -178,6 +198,8 @@
 
         plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
         sun -= PLANTS[selectedPlant].cost;
+
+        resetSelection();
     };
 
     function spawnZombie() {
@@ -232,11 +254,9 @@
 
             if (bucketCount > 0 && i % 6 === 0) {
                 zombiePool.push("bucket");
-            }
-            else if (i % 2 === 0 && coneCount > 0) {
+            } else if (i % 2 === 0 && coneCount > 0) {
                 zombiePool.push("cone");
-            }
-            else {
+            } else {
                 zombiePool.push("normal");
             }
         }
@@ -309,11 +329,40 @@
                 }
             }
 
-            if (z.x < 0) {
-                gameOver = true;
-                playSound("lose");
-                document.getElementById("result").innerText = "Ты проиграл!";
-                document.getElementById("result").style.color = "red";
+            if (z.x <= 5) {
+                const mower = mowers[z.row];
+
+                if (mower && !mower.used) {
+
+                    mower.active = true;
+                    mower.used = true;
+
+                    zombies.splice(zombies.indexOf(z), 1);
+
+                    return;
+                } else if (!mower || mower.used) {
+
+                    gameOver = true;
+                    playSound("lose");
+                    document.getElementById("result").innerText = "Ты проиграл!";
+                    document.getElementById("result").style.color = "red";
+                }
+            }
+        });
+
+        mowers.forEach(m => {
+            if (m.active) {
+                m.x += 6;
+
+                zombies.forEach((z, zi) => {
+                    if (z.row === m.row && z.x < m.x + 40) {
+                        zombies.splice(zi, 1);
+                    }
+                });
+
+                if (m.x > c.width) {
+                    m.active = false;
+                }
             }
         });
 
@@ -407,6 +456,17 @@
         });
 
         document.getElementById("sun").innerText = "Солнца: " + sun;
+
+        mowers.forEach(m => {
+
+            if (!m.used || m.active) {
+
+                const y = m.row * cellH + cellH / 2;
+
+                ctx.fillStyle = m.active ? "#d32f2f" : "#555";
+                ctx.fillRect(m.x, y - 15, 30, 30);
+            }
+        });
     }
 
     (function loop() {
