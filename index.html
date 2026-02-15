@@ -60,13 +60,10 @@
             height: 250px;
             background: #888;
             border-radius: 50% 50% 0 0;
+            margin-bottom: 10px;
         }
 
         #menu button {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
             padding: 10px 20px;
             cursor: pointer;
             font-size: 16px;
@@ -129,21 +126,14 @@
     <div id="status"></div>
     <div id="result"></div>
 
-    <!-- Звуки (MyInstants PvZ) -->
+    <!-- Звуки -->
     <audio id="plantSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-planting-sound.mp3"></audio>
-    <!-- посадка растения :contentReference[oaicite:4]{index=4} -->
     <audio id="sunPickup" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-sun-pickup.mp3"></audio>
-    <!-- сбор солнца :contentReference[oaicite:5]{index=5} -->
     <audio id="hitSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
-    <!-- попадание :contentReference[oaicite:6]{index=6} -->
     <audio id="zombieEat" src="https://soundinstants.com/sound/pvz-zombie-eating.mp3"></audio>
-    <!-- жует растение (альтернативный) :contentReference[oaicite:7]{index=7} -->
     <audio id="waveSound" src="https://www.myinstants.com/media/sounds/zombies-are-coming-sound-effect.mp3"></audio>
-    <!-- «Zombies are coming» (если найдётся URL) -->
     <audio id="winSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-victory-jingle.mp3"></audio>
-    <!-- победа :contentReference[oaicite:8]{index=8} -->
     <audio id="loseSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
-    <!-- используем hit как простое уведомление -->
 </div>
 
 <script>
@@ -274,6 +264,18 @@
             }
         });
 
+        bullets.forEach((b, i) => {
+            zombies.forEach(z => {
+                if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
+                    z.hp--;
+                    bullets.splice(i, 1);
+                    hitSound.play();
+                }
+            });
+        });
+
+        zombies = zombies.filter(z => z.hp > 0);
+
         const resDiv = document.getElementById("result");
         if (zombies.some(z => z.x < 0)) {
             gameOver = true;
@@ -282,7 +284,7 @@
             loseSound.play();
         }
         if (spawned >= wave * 5 && zombies.length === 0) {
-            if (wave < MAX_WAVES) {
+            if (wave < 3) {
                 wave++;
                 spawned = 0;
             } else {
@@ -313,6 +315,7 @@
             ctx.stroke();
         }
 
+        // растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
@@ -335,6 +338,56 @@
                 ctx.fillStyle = "#8b5a2b";
                 ctx.fillRect(cx - 16, cy - 16, 32, 32);
             }
+        });
+
+        // зомби
+        zombies.forEach(z => {
+            const zx = z.x, zy = z.row * cellH + cellH / 2;
+            ctx.fillStyle = "#777";
+            ctx.beginPath();
+            ctx.arc(zx, zy, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.moveTo(zx - 10, zy + 6);
+            ctx.lineTo(zx + 6, zy + 10);
+            ctx.lineTo(zx - 10, zy + 12);
+            ctx.fill();
+            if (z.type === "cone") {
+                ctx.fillStyle = "orange";
+                ctx.beginPath();
+                ctx.moveTo(zx - 18, zy - 12);
+                ctx.lineTo(zx + 18, zy - 12);
+                ctx.lineTo(zx, zy - 42);
+                ctx.fill();
+            }
+            if (z.type === "bucket") {
+                ctx.fillStyle = "#888";
+                ctx.fillRect(zx - 16, zy - 30, 32, 26);
+                ctx.fillStyle = "#666";
+                ctx.fillRect(zx - 18, zy - 32, 36, 4);
+            }
+        });
+
+        bullets.forEach(b => {
+            ctx.fillStyle = "green";
+            ctx.beginPath();
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        sunsArr.forEach(s => {
+            ctx.fillStyle = "orange";
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
+            ctx.fill();
         });
 
         document.getElementById("sun").innerText = "Солнца: " + sun;
