@@ -12,7 +12,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #8b5a2b; /* коричневый фон вокруг игры */
+            background-color: #8b5a2b; /* фон вокруг игры */
         }
 
         #game {
@@ -131,6 +131,13 @@
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
     <div id="result"></div>
+
+    <!-- Звуки -->
+    <audio id="shootSound" src="https://freesound.org/data/previews/146/146726_2437358-lq.mp3"></audio>
+    <audio id="collectSunSound" src="https://freesound.org/data/previews/256/256113_4486188-lq.mp3"></audio>
+    <audio id="eatPlantSound" src="https://freesound.org/data/previews/198/198841_2859976-lq.mp3"></audio>
+    <audio id="winSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
+    <audio id="loseSound" src="https://freesound.org/data/previews/331/331911_3248244-lq.mp3"></audio>
 </div>
 
 <script>
@@ -145,6 +152,12 @@
     const PLANTS = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
 
     for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
+
+    const shootSound = document.getElementById("shootSound");
+    const collectSunSound = document.getElementById("collectSunSound");
+    const eatPlantSound = document.getElementById("eatPlantSound");
+    const winSound = document.getElementById("winSound");
+    const loseSound = document.getElementById("loseSound");
 
     function selectPlant(t) {
         selectedPlant = t;
@@ -171,6 +184,7 @@
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
                 suns.splice(i, 1);
+                collectSunSound.play();
             }
         });
 
@@ -223,6 +237,7 @@
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
                 bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
                 p.cd = PLANTS.pea.cd;
+                shootSound.play();
             }
         });
 
@@ -236,6 +251,7 @@
                     plants.splice(plants.indexOf(z.target), 1);
                     z.eat = false;
                     z.target = null;
+                    eatPlantSound.play();
                 }
             } else {
                 z.x -= 0.4;
@@ -269,6 +285,7 @@
             gameOver = true;
             resultDiv.innerText = "Ты проиграл!";
             resultDiv.style.color = "red";
+            loseSound.play();
         }
 
         if (spawned >= wave * 5 && zombies.length === 0) {
@@ -279,6 +296,7 @@
                 gameOver = true;
                 resultDiv.innerText = "Ты выиграл!";
                 resultDiv.style.color = "green";
+                winSound.play();
             }
         }
     }
