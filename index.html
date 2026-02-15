@@ -8,7 +8,6 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background: black;
             font-family: Arial;
         }
 
@@ -20,7 +19,6 @@
             background: rgba(255, 255, 255, 0.8);
             padding: 6px;
             border-radius: 8px;
-            display: none;
         }
 
         button {
@@ -58,83 +56,61 @@
     const c = document.getElementById("c");
     const ctx = c.getContext("2d");
 
+    let rows = 3, cols = 7;
+    let cellW, cellH;
+    let sun, plants, zombies, bullets, suns, lawnmowers;
+    let selectedPlant = null, shovel = false;
+    let tick;
+
+    const shovelBtn = document.getElementById("shovelBtn");
+
     function resize() {
-        c.width = innerWidth;
-        c.height = innerHeight;
+        c.width = window.innerWidth;
+        c.height = window.innerHeight;
+        cellW = c.width / cols;
+        cellH = c.height / rows;
     }
 
     window.onresize = resize;
     resize();
 
-    const rows = 3, cols = 7;
-    let cellW, cellH;
-
-    let mode = "menu";
-    let sun, plants, zombies, bullets, suns, lawnmowers;
-    let selectedPlant = null, shovel = false;
-    let tick;
-
     function resetGame() {
-        cellW = c.width / cols;
-        cellH = c.height / rows;
         sun = 100;
         plants = [];
         zombies = [];
         bullets = [];
         suns = [];
         lawnmowers = [];
+        tick = 0;
         selectedPlant = null;
         shovel = false;
-        tick = 0;
 
         for (let r = 0; r < rows; r++) {
             lawnmowers.push({row: r, x: -40, active: true});
         }
     }
 
-    // ===== МЕНЮ =====
-    function drawMenu() {
-        ctx.clearRect(0, 0, c.width, c.height);
+    // ===== Выбор растений =====
+    function selectPlant(t) {
+        selectedPlant = t;
+        shovel = false;
+        shovelBtn.classList.remove("active");
+    }
 
-        let g = ctx.createLinearGradient(0, 0, 0, c.height);
-        g.addColorStop(0, "#87ceeb");
-        g.addColorStop(1, "#7ec850");
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, c.width, c.height);
-
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.font = "bold 48px Arial";
-        ctx.fillText("PLANTS vs ZOMBIES", c.width / 2, c.height / 2 - 80);
-
-        ctx.fillStyle = "#5a8f2f";
-        ctx.fillRect(c.width / 2 - 150, c.height / 2 - 20, 300, 70);
-        ctx.strokeStyle = "#2f6f2f";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(c.width / 2 - 150, c.height / 2 - 20, 300, 70);
-
-        ctx.fillStyle = "white";
-        ctx.font = "bold 32px Arial";
-        ctx.fillText("ADVENTURE", c.width / 2, c.height / 2 + 30);
+    function selectShovel() {
+        shovel = true;
+        selectedPlant = null;
+        shovelBtn.classList.add("active");
     }
 
     c.onclick = e => {
-        const r = c.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
+        const rect = c.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const col = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
 
-        if (mode === "menu") {
-            if (
-                x > c.width / 2 - 150 && x < c.width / 2 + 150 &&
-                y > c.height / 2 - 20 && y < c.height / 2 + 50
-            ) {
-                mode = "game";
-                document.getElementById("ui").style.display = "block";
-                resetGame();
-            }
-            return;
-        }
-
+        // собрать солнце
         suns.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -142,9 +118,7 @@
             }
         });
 
-        const col = Math.floor(x / cellW);
-        const row = Math.floor(y / cellH);
-
+        // лопата
         if (shovel) {
             const i = plants.findIndex(p => p.row === row && p.col === col);
             if (i != -1) plants.splice(i, 1);
@@ -164,19 +138,7 @@
         selectedPlant = null;
     };
 
-    function selectPlant(t) {
-        selectedPlant = t;
-        shovel = false;
-        shovelBtn.classList.remove("active");
-    }
-
-    function selectShovel() {
-        shovel = true;
-        selectedPlant = null;
-        shovelBtn.classList.add("active");
-    }
-
-    // ===== ИГРА =====
+    // ===== Зомби =====
     function spawnZombie() {
         zombies.push({
             row: Math.floor(Math.random() * rows),
@@ -185,9 +147,9 @@
         });
     }
 
+    // ===== Логика игры =====
     function update() {
         tick++;
-
         if (tick % 200 === 0) spawnZombie();
         if (tick % 300 === 0) suns.push({x: Math.random() * c.width, y: -20});
 
@@ -201,7 +163,7 @@
         });
 
         bullets.forEach(b => b.x += 5);
-        suns.forEach(s => s.y += 0.6);
+
         zombies.forEach(z => {
             z.x -= 0.4;
             bullets.forEach((b, i) => {
@@ -213,11 +175,18 @@
         });
 
         zombies = zombies.filter(z => z.hp > 0);
+        suns.forEach(s => s.y += 0.6);
     }
 
-    // ===== РИСОВАНИЕ =====
+    // ===== Рисование =====
     function draw() {
-        ctx.clearRect(0, 0, c.width, c.height);
+        // фон: небо + газон
+        const grad = ctx.createLinearGradient(0, 0, c.width, c.height);
+        grad.addColorStop(0, "#87ceeb");
+        grad.addColorStop(0.5, "#a0d8a0");
+        grad.addColorStop(1, "#7ec850");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, c.width, c.height);
 
         // сетка
         ctx.strokeStyle = "rgba(0,0,0,0.2)";
@@ -238,15 +207,13 @@
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2;
             const cy = p.row * cellH + cellH / 2;
-
             if (p.type === "pea") {
                 ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
                 ctx.arc(cx, cy, 14, 0, Math.PI * 2);
                 ctx.fill();
             }
-
-            if (p.type === "sun") { // СТАРЫЙ ПОДСОЛНУХ
+            if (p.type === "sun") {
                 ctx.fillStyle = "#ffd93b";
                 ctx.beginPath();
                 ctx.arc(cx, cy, 20, 0, Math.PI * 2);
@@ -256,7 +223,6 @@
                 ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
             }
-
             if (p.type === "nut") {
                 ctx.fillStyle = "#8b5a2b";
                 ctx.fillRect(cx - 16, cy - 16, 32, 32);
@@ -282,9 +248,11 @@
             ctx.fill();
 
             // рот
+            ctx.fillStyle = "black";
             ctx.fillRect(z.x - 8, zy + 8, 16, 4);
         });
 
+        // пули
         bullets.forEach(b => {
             ctx.fillStyle = "yellow";
             ctx.beginPath();
@@ -292,6 +260,7 @@
             ctx.fill();
         });
 
+        // солнце
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
@@ -299,20 +268,16 @@
             ctx.fill();
         });
 
-        sunDiv.innerText = "Солнца: " + sun;
+        // Обновляем солнце
+        document.getElementById("sun").innerText = "Солнца: " + sun;
     }
 
-    const sunDiv = document.getElementById("sun");
-    const shovelBtn = document.getElementById("shovelBtn");
-
     (function loop() {
-        if (mode === "menu") drawMenu();
-        else {
-            update();
-            draw();
-        }
+        update();
+        draw();
         requestAnimationFrame(loop);
     })();
 </script>
+
 </body>
 </html>
