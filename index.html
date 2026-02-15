@@ -19,7 +19,6 @@
             width: 720px;
             height: 360px;
             border: 4px solid #2f6f2f;
-            overflow: hidden;
             background: #7ec850;
         }
 
@@ -28,25 +27,7 @@
         }
 
         #menu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             text-align: center;
-        }
-
-        #menu .tombstone {
-            width: 200px;
-            height: 250px;
-            background: #888;
-            border-radius: 50% 50% 0 0;
-            margin-bottom: 10px;
-        }
-
-        #menu button {
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
         }
 
         #panel {
@@ -65,7 +46,6 @@
             background: white;
             padding: 4px 8px;
             border-radius: 4px;
-            z-index: 5;
         }
 
         #result {
@@ -75,7 +55,10 @@
             text-align: center;
             font-size: 24px;
             font-weight: bold;
-            z-index: 5;
+        }
+
+        button.active {
+            background: #ffb703;
         }
     </style>
 </head>
@@ -84,13 +67,14 @@
 <div id="game">
 
     <div id="menu">
-        <div class="tombstone"></div>
         <button onclick="startGame()">Играть</button>
     </div>
 
     <div id="panel">
         <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
         <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
+        <button onclick="selectPlant('nut')">🥜 Орех (50)</button>
+        <button id="shovelBtn" onclick="selectShovel()">🪓 Лопата</button>
     </div>
 
     <canvas id="c" width="720" height="360"></canvas>
@@ -100,26 +84,18 @@
 </div>
 
 <script>
-    const c = document.getElementById("c");
-    const ctx = c.getContext("2d");
-
+    const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7;
-    const cellW = c.width / cols;
-    const cellH = c.height / rows;
+    const cellW = c.width / cols, cellH = c.height / rows;
 
-    let sun = 100;
-    let plants = [];
-    let zombies = [];
-    let bullets = [];
-    let sunsArr = [];
-    let selectedPlant = null;
-    let gameStarted = false;
-    let gameOver = false;
-    let tick = 0;
+    let sun = 100, plants = [], zombies = [], bullets = [], sunsArr = [];
+    let selectedPlant = null, shovel = false;
+    let gameStarted = false, gameOver = false, tick = 0;
 
     const PLANTS = {
         pea: {cost: 50, hp: 3, cd: 60},
-        sun: {cost: 25, hp: 3, cd: 900} // МАЛО солнц
+        sun: {cost: 25, hp: 3, cd: 900},
+        nut: {cost: 50, hp: 25}
     };
 
     function startGame() {
@@ -131,19 +107,22 @@
 
     function selectPlant(t) {
         selectedPlant = t;
+        shovel = false;
+        document.getElementById("shovelBtn").classList.remove("active");
+    }
+
+    function selectShovel() {
+        shovel = true;
+        selectedPlant = null;
+        document.getElementById("shovelBtn").classList.add("active");
     }
 
     c.onclick = e => {
         if (!gameStarted || gameOver) return;
-
         const r = c.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
 
-        const col = Math.floor(x / cellW);
-        const row = Math.floor(y / cellH);
-
-        // сбор солнца
         sunsArr.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -151,63 +130,53 @@
             }
         });
 
+        if (shovel) {
+            const i = plants.findIndex(p => p.row === row && p.col === col);
+            if (i !== -1) plants.splice(i, 1);
+            shovel = false;
+            document.getElementById("shovelBtn").classList.remove("active");
+            return;
+        }
+
         if (!selectedPlant) return;
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
 
-        plants.push({
-            row, col,
-            type: selectedPlant,
-            hp: PLANTS[selectedPlant].hp,
-            cd: PLANTS[selectedPlant].cd
-        });
-
+        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
         sun -= PLANTS[selectedPlant].cost;
     };
 
     function spawnZombie() {
-        zombies.push({
-            row: Math.floor(Math.random() * rows),
-            x: c.width + 20,
-            hp: 6
-        });
+        let type = "normal", hp = 6;
+        if (Math.random() < 0.4) {
+            type = "cone";
+            hp = 12;
+        }
+        if (Math.random() < 0.2) {
+            type = "bucket";
+            hp = 20;
+        }
+        zombies.push({row: Math.floor(Math.random() * rows), x: c.width + 20, hp, type, eat: false, target: null});
     }
 
     function update() {
         if (!gameStarted || gameOver) return;
         tick++;
 
-        // спавн зомби
-        if (tick % 300 === 0) {
-            spawnZombie();
-        }
-
-        // падающее солнце в КЛЕТКУ
+        if (tick % 300 === 0) spawnZombie();
         if (tick % 400 === 0) {
             const col = Math.floor(Math.random() * cols);
             const row = Math.floor(Math.random() * rows);
-            sunsArr.push({
-                x: col * cellW + cellW / 2,
-                y: -20,
-                targetY: row * cellH + cellH * 0.65
-            });
+            sunsArr.push({x: col * cellW + cellW / 2, y: -20, targetY: row * cellH + cellH * 0.65});
         }
 
         plants.forEach(p => {
             if (p.type === "sun" && --p.cd <= 0) {
-                sunsArr.push({
-                    x: p.col * cellW + cellW / 2,
-                    y: p.row * cellH,
-                    targetY: p.row * cellH + cellH * 0.65
-                });
+                sunsArr.push({x: p.col * cellW + cellW / 2, y: p.row * cellH, targetY: p.row * cellH + cellH * 0.65});
                 p.cd = PLANTS.sun.cd;
             }
-
             if (p.type === "pea" && --p.cd <= 0) {
-                bullets.push({
-                    x: p.col * cellW + cellW * 0.7,
-                    row: p.row
-                });
+                bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
                 p.cd = PLANTS.pea.cd;
             }
         });
@@ -218,7 +187,23 @@
         });
 
         zombies.forEach(z => {
-            z.x -= 0.35;
+            if (z.eat && z.target) {
+                z.target.hp -= 0.03;
+                if (z.target.hp <= 0) {
+                    plants.splice(plants.indexOf(z.target), 1);
+                    z.eat = false;
+                    z.target = null;
+                }
+            } else {
+                z.x -= 0.35;
+                plants.forEach(p => {
+                    const px = p.col * cellW + cellW / 2;
+                    if (p.row === z.row && Math.abs(z.x - px) < 18) {
+                        z.eat = true;
+                        z.target = p;
+                    }
+                });
+            }
             if (z.x < 0) {
                 gameOver = true;
                 document.getElementById("result").innerText = "Ты проиграл!";
@@ -239,8 +224,8 @@
 
     function draw() {
         ctx.clearRect(0, 0, c.width, c.height);
-
         ctx.strokeStyle = "#5fa35f";
+
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
             ctx.moveTo(0, i * cellH);
@@ -255,8 +240,7 @@
         }
 
         plants.forEach(p => {
-            const cx = p.col * cellW + cellW / 2;
-            const cy = p.row * cellH + cellH / 2;
+            const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
                 ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
@@ -272,6 +256,10 @@
                 ctx.beginPath();
                 ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
+            }
+            if (p.type === "nut") {
+                ctx.fillStyle = "#8b5a2b";
+                ctx.fillRect(cx - 16, cy - 16, 32, 32);
             }
         });
 
@@ -289,7 +277,6 @@
             ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
             ctx.fill();
         });
-
         sunsArr.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
