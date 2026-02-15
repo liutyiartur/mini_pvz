@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8"/>
-    <title>Mini Plants vs Zombies+</title>
+    <meta charset="UTF-8">
+    <title>🧠 Mini PvZ</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,8 +12,8 @@
         }
 
         #game {
-            margin-top: 20px;
             text-align: center;
+            margin-top: 20px;
         }
 
         canvas {
@@ -23,7 +23,7 @@
 
         button {
             padding: 8px 14px;
-            font-size: 14px;
+            margin-top: 6px;
         }
     </style>
 </head>
@@ -31,174 +31,140 @@
 <div id="game">
     <canvas id="c" width="720" height="360"></canvas>
     <br>
-    <button onclick="startPlacing()">🌱 Растение (50)</button>
+    <button onclick="placing=true">🌱 Растение (50)</button>
     <div id="sun">Солнца: 100</div>
     <div id="status"></div>
 </div>
 
 <script>
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
+    const c = document.getElementById("c"), ctx = c.getContext("2d");
+    const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
+    let sun = 100, plants = [], zombies = [], bullets = [], suns = [];
+    let placing = false, tick = 0, spawned = 0, gameOver = false;
+    const MAX_ZOMBIES = 12, ZOMBIE_HP = 9, PLANT_HP = 3;
 
-    const rows = 3;
-    const cols = 7;
-    const cellW = canvas.width / cols;
-    const cellH = canvas.height / rows;
-
-    let sun = 100;
-    let plants = [];
-    let zombies = [];
-    let bullets = [];
-    let suns = [];
-
-    let placing = false;
-    let tick = 0;
-    let spawned = 0;
-    const MAX_ZOMBIES = 12;
-    let gameOver = false;
-
-    function startPlacing() {
-        placing = true;
-    }
-
-    canvas.addEventListener('click', e => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // collect suns
-        suns.forEach((s, i) => {
-            if (Math.hypot(s.x - x, s.y - y) < 15) {
-                sun += 25;
-                suns.splice(i, 1);
-            }
-        });
-
+    c.onclick = e => {
+        const r = c.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+        suns.forEach((s, i) => Math.hypot(s.x - x, s.y - y) < 15 && (sun += 25, suns.splice(i, 1)));
         if (!placing || sun < 50) return;
-
-        const col = Math.floor(x / cellW);
-        const row = Math.floor(y / cellH);
-
-        // check if cell already has a plant
+        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
         if (plants.some(p => p.row === row && p.col === col)) return;
-
-        plants.push({row, col, cd: 0});
+        plants.push({row, col, hp: PLANT_HP, cd: 0});
         sun -= 50;
         placing = false;
-    });
+    };
 
     function spawnZombie() {
-        const row = Math.floor(Math.random() * rows);
-        zombies.push({row, x: canvas.width - 20, hp: 6});
+        zombies.push({row: Math.random() * rows | 0, x: c.width - 20, hp: ZOMBIE_HP, eat: false, t: null});
         spawned++;
     }
 
     function spawnSun() {
-        suns.push({x: Math.random() * canvas.width, y: -20});
+        suns.push({x: Math.random() * c.width, y: -20});
     }
 
     function update() {
         if (gameOver) return;
         tick++;
-
-        if (tick % 160 === 0 && spawned < MAX_ZOMBIES) spawnZombie();
-        if (tick % 180 === 0) spawnSun();
+        if (tick % 160 == 0 && spawned < MAX_ZOMBIES) spawnZombie();
+        if (tick % 180 == 0) spawnSun();
 
         plants.forEach(p => {
-            p.cd--;
-            // check if zombie in same row
-            if (p.cd <= 0 && zombies.some(z => z.row === p.row)) {
-                bullets.push({
-                    x: p.col * cellW + cellW * 0.7,
-                    row: p.row
-                });
+            if (--p.cd <= 0 && zombies.some(z => z.row === p.row)) {
+                bullets.push({x: p.col * cellW + cellW * .7, row: p.row});
                 p.cd = 45;
             }
         });
 
         bullets.forEach(b => b.x += 5);
-        zombies.forEach(z => z.x -= 0.45);
-        suns.forEach(s => s.y += 0.6);
+        suns.forEach(s => s.y += .6);
 
-        bullets.forEach((b, bi) => {
-            zombies.forEach((z, zi) => {
-                if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
-                    z.hp--;
-                    bullets.splice(bi, 1);
+        zombies.forEach(z => {
+            if (z.eat && z.t) {
+                z.t.hp -= .03;
+                if (z.t.hp <= 0) {
+                    plants.splice(plants.indexOf(z.t), 1);
+                    z.eat = false;
+                    z.t = null;
                 }
-            });
-        });
-
-        zombies.forEach((z, zi) => {
-            if (z.hp <= 0) zombies.splice(zi, 1);
-            if (z.x < 0) {
-                gameOver = true;
-                document.getElementById('status').innerText = "💀 Поражение";
+            } else {
+                z.x -= .45;
+                plants.forEach(p => {
+                    const px = p.col * cellW + cellW / 2;
+                    if (p.row === z.row && Math.abs(z.x - px) < 18) {
+                        z.eat = true;
+                        z.t = p;
+                    }
+                });
             }
         });
 
+        bullets.forEach((b, i) => zombies.forEach(z => {
+            if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
+                z.hp--;
+                bullets.splice(i, 1);
+            }
+        }));
+
+        zombies = zombies.filter(z => z.hp > 0 && z.x > 0);
+        if (zombies.some(z => z.x <= 0)) {
+            gameOver = true;
+            status.innerText = "💀 Поражение";
+        }
         if (spawned === MAX_ZOMBIES && zombies.length === 0) {
             gameOver = true;
-            document.getElementById('status').innerText = "🎉 Победа!";
+            status.innerText = "🎉 Победа";
         }
     }
 
     function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // grid
+        ctx.clearRect(0, 0, c.width, c.height);
         ctx.strokeStyle = "#5fa35f";
-        for (let r = 0; r <= rows; r++) {
+        for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
-            ctx.moveTo(0, r * cellH);
-            ctx.lineTo(canvas.width, r * cellH);
+            ctx.moveTo(0, i * cellH);
+            ctx.lineTo(c.width, i * cellH);
             ctx.stroke();
         }
-        for (let c = 0; c <= cols; c++) {
+        for (let i = 0; i <= cols; i++) {
             ctx.beginPath();
-            ctx.moveTo(c * cellW, 0);
-            ctx.lineTo(c * cellW, canvas.height);
+            ctx.moveTo(i * cellW, 0);
+            ctx.lineTo(i * cellW, c.height);
             ctx.stroke();
         }
-
         plants.forEach(p => {
             ctx.fillStyle = "#2f7d2f";
             ctx.beginPath();
-            ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 14, 0, Math.PI * 2);
+            ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 14, 0, 7);
             ctx.fill();
         });
-
         zombies.forEach(z => {
-            ctx.fillStyle = "#777";
+            ctx.fillStyle = z.eat ? "#555" : "#777";
             ctx.beginPath();
-            ctx.arc(z.x, z.row * cellH + cellH / 2, 16, 0, Math.PI * 2);
+            ctx.arc(z.x, z.row * cellH + cellH / 2, 16, 0, 7);
             ctx.fill();
         });
-
         bullets.forEach(b => {
             ctx.fillStyle = "yellow";
             ctx.beginPath();
-            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
             ctx.fill();
         });
-
         suns.forEach(s => {
             ctx.fillStyle = "orange";
             ctx.beginPath();
-            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
+            ctx.arc(s.x, s.y, 12, 0, 7);
             ctx.fill();
         });
-
-        document.getElementById('sun').innerText = "Солнца: " + sun;
+        sunDiv.innerText = "Солнца: " + sun;
     }
 
-    function loop() {
+    const sunDiv = document.getElementById("sun"), status = document.getElementById("status");
+    (function loop() {
         update();
         draw();
         requestAnimationFrame(loop);
-    }
-
-    loop();
+    })();
 </script>
 </body>
 </html>
