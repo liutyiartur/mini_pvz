@@ -12,15 +12,15 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: none;
+            background: #87ceeb; /* временно, фон через блоки */
         }
 
         #game {
-            text-align: center;
             position: relative;
             width: 720px;
             height: 360px;
             border: 4px solid #2f6f2f;
+            overflow: hidden;
         }
 
         #sky {
@@ -43,7 +43,6 @@
 
         canvas {
             display: none;
-            background: transparent;
             position: absolute;
             top: 0;
             left: 0;
@@ -52,14 +51,14 @@
         #menu {
             position: absolute;
             top: 50%;
-            left: 60%; /* сдвинуто вправо */
+            left: 65%; /* сдвинуто вправо */
             transform: translate(-50%, -50%);
             text-align: center;
             z-index: 2;
         }
 
         #menu .tombstone {
-            width: 250px;
+            width: 200px;
             height: 250px;
             background: #888;
             border-radius: 50% 50% 0 0;
@@ -93,6 +92,7 @@
             background: white;
             padding: 4px 8px;
             border-radius: 4px;
+            z-index: 3;
         }
 
         button.active {
@@ -124,6 +124,7 @@
 </div>
 
 <script>
+    // ---- Игра ----
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
 
@@ -133,7 +134,6 @@
     const MAX_WAVES = 3;
     const PLANTS = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
 
-    // газонокосилки
     for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
     function selectPlant(t) {
@@ -163,7 +163,7 @@
             }
         });
 
-        // Лопата
+        // лопата
         if (shovel) {
             const idx = plants.findIndex(p => p.row === row && p.col === col);
             if (idx !== -1) {
@@ -317,8 +317,6 @@
             ctx.beginPath();
             ctx.arc(zx, zy, 18, 0, Math.PI * 2);
             ctx.fill();
-
-            // глаза
             ctx.fillStyle = "white";
             ctx.beginPath();
             ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
@@ -327,16 +325,12 @@
             ctx.beginPath();
             ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
             ctx.fill();
-
-            // рот
             ctx.fillStyle = "black";
             ctx.beginPath();
             ctx.moveTo(zx - 10, zy + 6);
             ctx.lineTo(zx + 6, zy + 10);
             ctx.lineTo(zx - 10, zy + 12);
             ctx.fill();
-
-            // конус
             if (z.type === "cone") {
                 ctx.fillStyle = "orange";
                 ctx.beginPath();
@@ -345,7 +339,6 @@
                 ctx.lineTo(zx, zy - 42);
                 ctx.fill();
             }
-            // ведро
             if (z.type === "bucket") {
                 ctx.fillStyle = "#888";
                 ctx.fillRect(zx - 16, zy - 30, 32, 26);
