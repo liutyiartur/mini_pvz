@@ -55,8 +55,8 @@
         }
 
         #menu .tombstone {
-            width: 200px;
-            height: 250px;
+            width: 250px;
+            height: 300px;
             background: #888;
             border-radius: 50% 50% 0 0;
             margin-bottom: 0px;
@@ -64,9 +64,9 @@
         }
 
         #menu button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             position: absolute;
             top: 50%;
             left: 50%;
@@ -97,7 +97,7 @@
             bottom: 10px;
             width: 100%;
             text-align: center;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             z-index: 3;
         }
@@ -141,15 +141,15 @@
     const PLANTS_DATA = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
     for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
-    // Звуки через открытые ссылки
+    // Звуки (рабочие прямые ссылки)
     const plantSound = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
-    const sunPickup = new Audio("https://www.soundjay.com/button/sounds/button-3.mp3");
-    const peaShot = new Audio("https://www.soundjay.com/button/sounds/button-09.mp3");
+    const sunPickup = new Audio("https://www.soundjay.com/button/sounds/button-10.mp3");
+    const hitSound = new Audio("https://www.soundjay.com/button/sounds/button-4.mp3");
     const zombieEat = new Audio("https://www.soundjay.com/human/sounds/munching-1.mp3");
-    const spawnSound = new Audio("https://www.soundjay.com/button/sounds/button-10.mp3");
-    const zombieDeath = new Audio("https://www.soundjay.com/button/sounds/button-4.mp3");
-    const winSound = new Audio("https://www.soundjay.com/button/sounds/button-7.mp3");
-    const loseSound = new Audio("https://www.soundjay.com/button/sounds/button-8.mp3");
+    const spawnSound = new Audio("https://www.soundjay.com/human/sounds/uh-oh-01.mp3");
+    const zombieDeath = new Audio("https://www.soundjay.com/human/sounds/scream-1.mp3");
+    const winSound = new Audio("https://www.soundjay.com/button/sounds/button-09.mp3");
+    const loseSound = new Audio("https://www.soundjay.com/button/sounds/button-3.mp3");
 
     function selectPlant(t) {
         selectedPlant = t;
@@ -168,6 +168,7 @@
         const rect = c.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
         const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
 
+        // собрать солнце
         sunsArr.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -176,6 +177,7 @@
             }
         });
 
+        // лопата
         if (shovel) {
             const i = plants.findIndex(p => p.row === row && p.col === col);
             if (i !== -1) {
@@ -231,7 +233,7 @@
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
                 bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
                 p.cd = PLANTS_DATA.pea.cd;
-                peaShot.play();
+                hitSound.play();
             }
         });
 
@@ -265,7 +267,7 @@
                 if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
                     z.hp--;
                     bullets.splice(i, 1);
-                    peaShot.play();
+                    hitSound.play();
                     if (z.hp <= 0) zombieDeath.play();
                 }
             });
@@ -312,6 +314,7 @@
             ctx.stroke();
         }
 
+        // растения
         plants.forEach(p => {
             const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
@@ -336,6 +339,7 @@
             }
         });
 
+        // зомби
         zombies.forEach(z => {
             const zx = z.x, zy = z.row * cellH + cellH / 2;
             ctx.fillStyle = "#777";
