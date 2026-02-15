@@ -6,12 +6,12 @@
     <style>
         body {
             margin: 0;
+            font-family: Arial;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             background: #8b5a2b;
-            font-family: Arial;
         }
 
         #game {
@@ -20,52 +20,33 @@
             height: 360px;
             border: 4px solid #2f6f2f;
             overflow: hidden;
-        }
-
-        #sky {
-            position: absolute;
-            top: 0;
-            height: 50%;
-            width: 100%;
-            background: #87ceeb;
-        }
-
-        #grass {
-            position: absolute;
-            bottom: 0;
-            height: 50%;
-            width: 100%;
             background: #7ec850;
         }
 
         canvas {
             display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
         }
 
         #menu {
             position: absolute;
             top: 50%;
-            left: 65%;
+            left: 50%;
             transform: translate(-50%, -50%);
+            text-align: center;
         }
 
-        .tombstone {
+        #menu .tombstone {
             width: 200px;
             height: 250px;
             background: #888;
             border-radius: 50% 50% 0 0;
-            position: relative;
+            margin-bottom: 10px;
         }
 
         #menu button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
         }
 
         #panel {
@@ -74,7 +55,7 @@
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 3;
+            z-index: 5;
         }
 
         #sun {
@@ -84,6 +65,7 @@
             background: white;
             padding: 4px 8px;
             border-radius: 4px;
+            z-index: 5;
         }
 
         #result {
@@ -93,14 +75,13 @@
             text-align: center;
             font-size: 24px;
             font-weight: bold;
+            z-index: 5;
         }
     </style>
 </head>
 
 <body>
 <div id="game">
-    <div id="sky"></div>
-    <div id="grass"></div>
 
     <div id="menu">
         <div class="tombstone"></div>
@@ -110,37 +91,59 @@
     <div id="panel">
         <button onclick="selectPlant('pea')">🌱 Горох (50)</button>
         <button onclick="selectPlant('sun')">🌻 Подсолнух (25)</button>
-        <button onclick="selectPlant('nut')">🥜 Орех (25)</button>
     </div>
 
     <canvas id="c" width="720" height="360"></canvas>
     <div id="sun">Солнца: 100</div>
     <div id="result"></div>
+
 </div>
 
 <script>
-    const c = document.getElementById("c"), ctx = c.getContext("2d");
-    const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
+    const c = document.getElementById("c");
+    const ctx = c.getContext("2d");
 
-    let sun = 100, plants = [], zombies = [], bullets = [], sunsArr = [];
-    let selectedPlant = null, gameStarted = false, gameOver = false, tick = 0;
+    const rows = 3, cols = 7;
+    const cellW = c.width / cols;
+    const cellH = c.height / rows;
+
+    let sun = 100;
+    let plants = [];
+    let zombies = [];
+    let bullets = [];
+    let sunsArr = [];
+    let selectedPlant = null;
+    let gameStarted = false;
+    let gameOver = false;
+    let tick = 0;
 
     const PLANTS = {
-        pea: {cost: 50, hp: 3, cd: 45},
-        sun: {cost: 25, hp: 3, cd: 720}, // ⬅️ реже производит солнце
-        nut: {cost: 25, hp: 20}
+        pea: {cost: 50, hp: 3, cd: 60},
+        sun: {cost: 25, hp: 3, cd: 900} // МАЛО солнц
     };
+
+    function startGame() {
+        document.getElementById("menu").style.display = "none";
+        document.getElementById("panel").style.display = "block";
+        c.style.display = "block";
+        gameStarted = true;
+    }
 
     function selectPlant(t) {
         selectedPlant = t;
     }
 
     c.onclick = e => {
-        if (!gameStarted) return;
-        const r = c.getBoundingClientRect();
-        const x = e.clientX - r.left, y = e.clientY - r.top;
-        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
+        if (!gameStarted || gameOver) return;
 
+        const r = c.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+
+        const col = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
+
+        // сбор солнца
         sunsArr.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -152,20 +155,21 @@
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
 
-        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
+        plants.push({
+            row, col,
+            type: selectedPlant,
+            hp: PLANTS[selectedPlant].hp,
+            cd: PLANTS[selectedPlant].cd
+        });
+
         sun -= PLANTS[selectedPlant].cost;
-        selectedPlant = null;
     };
 
-    function spawnSun() {
-        const col = Math.floor(Math.random() * cols);
-        const row = Math.floor(Math.random() * rows);
-        sunsArr.push({
-            col, row,
-            x: col * cellW + cellW / 2,
-            y: -20,
-            targetY: row * cellH + cellH / 2,
-            falling: true
+    function spawnZombie() {
+        zombies.push({
+            row: Math.floor(Math.random() * rows),
+            x: c.width + 20,
+            hp: 6
         });
     }
 
@@ -173,39 +177,70 @@
         if (!gameStarted || gameOver) return;
         tick++;
 
-        if (tick % 400 === 0) spawnSun();
+        // спавн зомби
+        if (tick % 300 === 0) {
+            spawnZombie();
+        }
+
+        // падающее солнце в КЛЕТКУ
+        if (tick % 400 === 0) {
+            const col = Math.floor(Math.random() * cols);
+            const row = Math.floor(Math.random() * rows);
+            sunsArr.push({
+                x: col * cellW + cellW / 2,
+                y: -20,
+                targetY: row * cellH + cellH * 0.65
+            });
+        }
 
         plants.forEach(p => {
             if (p.type === "sun" && --p.cd <= 0) {
                 sunsArr.push({
-                    col: p.col, row: p.row,
                     x: p.col * cellW + cellW / 2,
-                    y: p.row * cellH - 20,
-                    targetY: p.row * cellH + cellH / 2,
-                    falling: true
+                    y: p.row * cellH,
+                    targetY: p.row * cellH + cellH * 0.65
                 });
                 p.cd = PLANTS.sun.cd;
             }
+
+            if (p.type === "pea" && --p.cd <= 0) {
+                bullets.push({
+                    x: p.col * cellW + cellW * 0.7,
+                    row: p.row
+                });
+                p.cd = PLANTS.pea.cd;
+            }
         });
 
+        bullets.forEach(b => b.x += 5);
         sunsArr.forEach(s => {
-            if (s.falling) {
-                s.y += 1.2;
-                if (s.y >= s.targetY) {
-                    s.y = s.targetY;
-                    s.falling = false;
-                }
+            if (s.y < s.targetY) s.y += 0.8;
+        });
+
+        zombies.forEach(z => {
+            z.x -= 0.35;
+            if (z.x < 0) {
+                gameOver = true;
+                document.getElementById("result").innerText = "Ты проиграл!";
+                document.getElementById("result").style.color = "red";
             }
+        });
+
+        bullets.forEach((b, i) => {
+            zombies.forEach((z, zi) => {
+                if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
+                    z.hp--;
+                    bullets.splice(i, 1);
+                    if (z.hp <= 0) zombies.splice(zi, 1);
+                }
+            });
         });
     }
 
     function draw() {
-        if (gameStarted) {
-            ctx.fillStyle = "#7ec850";
-            ctx.fillRect(0, 0, c.width, c.height);
-        }
+        ctx.clearRect(0, 0, c.width, c.height);
 
-        ctx.strokeStyle = "#6aa84f";
+        ctx.strokeStyle = "#5fa35f";
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
             ctx.moveTo(0, i * cellH);
@@ -220,7 +255,8 @@
         }
 
         plants.forEach(p => {
-            const cx = p.col * cellW + cellW / 2, cy = p.row * cellH + cellH / 2;
+            const cx = p.col * cellW + cellW / 2;
+            const cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
                 ctx.fillStyle = "#2f8f2f";
                 ctx.beginPath();
@@ -237,10 +273,21 @@
                 ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
             }
-            if (p.type === "nut") {
-                ctx.fillStyle = "#8b5a2b";
-                ctx.fillRect(cx - 16, cy - 16, 32, 32);
-            }
+        });
+
+        zombies.forEach(z => {
+            const zy = z.row * cellH + cellH / 2;
+            ctx.fillStyle = "#777";
+            ctx.beginPath();
+            ctx.arc(z.x, zy, 18, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        bullets.forEach(b => {
+            ctx.fillStyle = "green";
+            ctx.beginPath();
+            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
         });
 
         sunsArr.forEach(s => {
@@ -251,13 +298,6 @@
         });
 
         document.getElementById("sun").innerText = "Солнца: " + sun;
-    }
-
-    function startGame() {
-        document.getElementById("menu").style.display = "none";
-        document.getElementById("panel").style.display = "block";
-        c.style.display = "block";
-        gameStarted = true;
     }
 
     (function loop() {
