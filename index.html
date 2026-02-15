@@ -70,7 +70,6 @@
         const rect = c.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        // собираем солнце
         suns.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
@@ -211,38 +210,54 @@
             ctx.stroke();
         }
 
-        // Растения с текстурами
+        // Растения с улучшенными текстурами
         plants.forEach(p => {
+            const cx = p.col * cellW + cellW / 2;
+            const cy = p.row * cellH + cellH / 2;
             if (p.type === "pea") {
                 ctx.fillStyle = "green";
-                ctx.fillRect(p.col * cellW + 6, p.row * cellH + 6, 16, 16);
+                ctx.fillRect(cx - 12, cy - 12, 24, 24);
                 ctx.fillStyle = "darkgreen";
-                ctx.fillRect(p.col * cellW + 10, p.row * cellH + 6, 4, 4);
-                ctx.fillRect(p.col * cellW + 10, p.row * cellH + 14, 4, 4);
+                ctx.beginPath();
+                ctx.arc(cx, cy - 6, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "lightgreen";
+                ctx.beginPath();
+                ctx.arc(cx, cy + 6, 6, 0, Math.PI * 2);
+                ctx.fill();
             } else if (p.type === "sun") {
                 ctx.fillStyle = "yellow";
                 ctx.beginPath();
-                ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 14, 0, 7);
+                ctx.arc(cx, cy, 20, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = "brown";
                 ctx.beginPath();
-                ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 6, 0, 7);
+                ctx.arc(cx, cy, 10, 0, Math.PI * 2);
                 ctx.fill();
             } else if (p.type === "nut") {
                 ctx.fillStyle = "#8b5a2b";
-                ctx.fillRect(p.col * cellW + 4, p.row * cellH + 4, 22, 22);
+                ctx.fillRect(cx - 15, cy - 15, 30, 30);
+                ctx.fillStyle = "#a0522d";
+                ctx.fillRect(cx - 12, cy - 12, 24, 24);
             }
         });
 
-        // Зомби с текстурами
+// Зомби с симпатичным видом
         zombies.forEach(z => {
-            ctx.fillStyle = z.type === "bucket" ? "#444" : z.type === "cone" ? "orange" : "#777";
-            ctx.fillRect(z.x - 8, z.row * cellH + cellH / 2 - 16, 16, 32);
+            const zx = z.x;
+            const zy = z.row * cellH + cellH / 2;
+            ctx.fillStyle = z.type === "bucket" ? "#555" : z.type === "cone" ? "orange" : "#999";
+            ctx.fillRect(zx - 12, zy - 20, 24, 40); // тело
+            ctx.fillStyle = "#ccc";
+            ctx.fillRect(zx - 12, zy - 30, 24, 10); // голова
             ctx.fillStyle = "white";
-            ctx.fillRect(z.x - 6, z.row * cellH + cellH / 2 - 12, 4, 4);
-            ctx.fillRect(z.x + 2, z.row * cellH + cellH / 2 - 12, 4, 4);
+            ctx.fillRect(zx - 8, zy - 28, 6, 6); // глаза
+            ctx.fillRect(zx + 2, zy - 28, 6, 6);
+            ctx.fillStyle = "black";
+            ctx.fillRect(zx - 6, zy - 26, 2, 2);
+            ctx.fillRect(zx + 4, zy - 26, 2, 2);
             ctx.fillStyle = "red";
-            ctx.fillRect(z.x - 4, z.row * cellH + cellH / 2 + 6, 8, 4);
+            ctx.fillRect(zx - 6, zy - 18, 12, 4); // рот
         });
 
         bullets.forEach(b => {
@@ -258,7 +273,7 @@
             ctx.fill();
         });
 
-        // Газонокосилки с текстурами
+// Газонокосилки с текстурами
         lawnmowers.forEach(l => {
             if (l.active) {
                 ctx.fillStyle = "yellow";
