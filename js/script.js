@@ -4,6 +4,9 @@ let zombiesSpawned = 0;
 let spawnDelay = 120;
 let mowers = [];
 
+const resultEl = document.getElementById("result");
+const sunEl = document.getElementById("sun");
+
 const c = document.getElementById("c"), ctx = c.getContext("2d");
 const rows = 3, cols = 7;
 const cellW = c.width / cols, cellH = c.height / rows;
@@ -181,9 +184,8 @@ function update() {
     tick++;
 
     if (zombiesSpawned < totalZombies) {
-        if (waveStage === 1) spawnDelay = 180;
-        if (waveStage === 2) spawnDelay = 120;
-        if (waveStage === 3) spawnDelay = 60;
+        const delays = [0, 180, 120, 60];
+        spawnDelay = delays[waveStage] || 180;
 
         if (tick % spawnDelay === 0)
             spawnZombie();
@@ -258,8 +260,8 @@ function update() {
 
                 gameOver = true;
                 playSound("lose");
-                document.getElementById("result").innerText = "Ты проиграл!";
-                document.getElementById("result").style.color = "red";
+                resultEl.innerText = "Ты проиграл!";
+                resultEl.style.color = "red";
                 break;
             }
         }
@@ -269,11 +271,11 @@ function update() {
         if (m.active) {
             m.x += 6;
 
-            zombies.forEach((z, zi) => {
-                if (z.row === m.row && z.x < m.x + 40) {
-                    zombies.splice(zi, 1);
+            for (let i = zombies.length - 1; i >= 0; i--) {
+                if (zombies[i].row === m.row && zombies[i].x < m.x + 40) {
+                    zombies.splice(i, 1);
                 }
-            });
+            }
 
             if (m.x > c.width) {
                 m.active = false;
@@ -281,21 +283,27 @@ function update() {
         }
     });
 
-    bullets.forEach((b, i) => {
-        zombies.forEach((z, zi) => {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+
+        for (let j = zombies.length - 1; j >= 0; j--) {
+            const z = zombies[j];
+
             if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
                 z.hp--;
                 playSound("hit");
                 bullets.splice(i, 1);
-                if (z.hp <= 0) zombies.splice(zi, 1);
-            }
-        });
-    });
 
-    if (tick > 3000 && zombies.length === 0) {
+                if (z.hp <= 0) zombies.splice(j, 1);
+                break;
+            }
+        }
+    }
+
+    if (zombiesSpawned >= totalZombies && zombies.length === 0) {
         gameOver = true;
-        document.getElementById("result").innerText = "ПОБЕДА 🏆";
-        document.getElementById("result").style.color = "green";
+        resultEl.innerText = "ПОБЕДА 🏆";
+        resultEl.style.color = "green";
     }
 
     if (zombiesSpawned > totalZombies * 0.33)
@@ -370,12 +378,10 @@ function draw() {
         ctx.fill();
     });
 
-    document.getElementById("sun").innerText = "Солнца: " + sun;
+    sunEl.innerText = "Солнца: " + sun;
 
     mowers.forEach(m => {
-
         if (!m.used || m.active) {
-
             const y = m.row * cellH + cellH / 2;
 
             ctx.fillStyle = m.active ? "#d32f2f" : "#555";
