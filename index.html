@@ -45,27 +45,60 @@
 </div>
 
 <script>
+    // canvas
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
+
+    // ресурсы
     let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
     let selectedPlant = null, tick = 0, wave = 1, spawned = 0, gameOver = false;
-
     const MAX_WAVES = 3;
+
     const PLANTS = {
-        pea: {cost: 50, hp: 3, shoot: true},
-        sun: {cost: 25, hp: 3, shoot: false, produce: true, cd: 300},
-        nut: {cost: 25, hp: 22, shoot: false}
+        pea: {cost: 50, hp: 3, shoot: true, img: "https://i.imgur.com/3q6L6xG.png"},
+        sun: {cost: 25, hp: 3, shoot: false, produce: true, cd: 300, img: "https://i.imgur.com/o6R6yLh.png"},
+        nut: {cost: 25, hp: 22, shoot: false, img: "https://i.imgur.com/EYcGpxO.png"}
     };
 
-    // Газонокосилки
+    // загрузка текстур зомби
+    const ZOMBIES = {
+        normal: "https://i.imgur.com/TtWsjok.png",
+        cone: "https://i.imgur.com/TZ3q0n7.png",
+        bucket: "https://i.imgur.com/woZbV5q.png"
+    };
+
+    // газонокосилка
+    const LAWNMOWER_IMG = "https://i.imgur.com/42cBvnE.png";
+    // пуля
+    const BULLET_IMG = "https://i.imgur.com/8LkxFpm.png";
+    // солнце
+    const SUN_IMG = "https://i.imgur.com/WXo1xlU.png";
+
+    let images = {};
+
+    function loadImages(urls, callback) {
+        let loaded = 0;
+        for (let key in urls) {
+            images[key] = new Image();
+            images[key].src = urls[key];
+            images[key].onload = () => {
+                loaded++;
+                if (loaded === Object.keys(urls).length) callback();
+            }
+        }
+    }
+
+    // газонокосилки по рядам
     for (let r = 0; r < rows; r++) {
         lawnmowers.push({row: r, x: -20, active: true});
     }
 
+    // выбор растения
     function selectPlant(type) {
         selectedPlant = type;
     }
 
+    // клик
     c.onclick = e => {
         const rect = c.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -78,8 +111,7 @@
             }
         });
         if (!selectedPlant) return;
-        const col = Math.floor(x / cellW);
-        const row = Math.floor(y / cellH);
+        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
         if (plants.some(p => p.row === row && p.col === col)) return;
         if (sun < PLANTS[selectedPlant].cost) return;
         plants.push({
@@ -94,7 +126,7 @@
         selectedPlant = null;
     };
 
-    // Зомби волны
+    // зомби
     function spawnZombie() {
         let ztype = "normal", hp = 9;
         if (wave >= 2) {
@@ -120,15 +152,17 @@
         spawned++;
     }
 
+    // солнце падает
     function spawnSun() {
         suns.push({x: Math.random() * c.width, y: -20});
     }
 
+    // update
     function update() {
         if (gameOver) return;
         tick++;
 
-        // волны зомби
+        // волны
         if (tick % 200 === 0 && spawned < wave * 5) {
             spawnZombie();
         }
@@ -150,13 +184,9 @@
             }
         });
 
-        // пули
         bullets.forEach(b => b.x += 5);
-
-        // солнце падает
         suns.forEach(s => s.y += 0.6);
 
-        // зомби
         zombies.forEach(z => {
             if (z.eat && z.target) {
                 z.target.hp -= 0.03;
@@ -174,7 +204,6 @@
                         z.target = p;
                     }
                 });
-                // газонокосилка
                 if (z.x <= 0 && lawnmowers[z.row].active) {
                     zombies = zombies.filter(zz => zz.row !== z.row);
                     lawnmowers[z.row].active = false;
@@ -182,25 +211,20 @@
             }
         });
 
-        // пули бьют зомби
         bullets.forEach((b, i) => zombies.forEach(z => {
             if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
                 z.hp--;
                 bullets.splice(i, 1);
             }
         }));
-
-        // удаляем мертвых
         zombies = zombies.filter(z => z.hp > 0);
 
-        // поражение
         if (zombies.some(z => z.x <= 0 && !lawnmowers[z.row].active)) {
             gameOver = true;
             status.innerText = "💀 Поражение";
             return;
         }
 
-        // победа и волны
         if (spawned >= wave * 5 && zombies.length === 0) {
             if (wave < MAX_WAVES) {
                 wave++;
@@ -212,6 +236,7 @@
         }
     }
 
+    // draw
     function draw() {
         ctx.clearRect(0, 0, c.width, c.height);
         ctx.strokeStyle = "#5fa35f";
@@ -228,50 +253,36 @@
             ctx.stroke();
         }
 
-        plants.forEach(p => {
-            ctx.fillStyle = p.type === "pea" ? "#2f7d2f" : p.type === "sun" ? "#f5c542" : "#8b5a2b";
-            ctx.beginPath();
-            ctx.arc(p.col * cellW + cellW / 2, p.row * cellH + cellH / 2, 14, 0, 7);
-            ctx.fill();
-        });
-
-        zombies.forEach(z => {
-            ctx.fillStyle = z.type === "bucket" ? "#444" : z.type === "cone" ? "orange" : "#777";
-            ctx.beginPath();
-            ctx.arc(z.x, z.row * cellH + cellH / 2, 16, 0, 7);
-            ctx.fill();
-        });
-
-        bullets.forEach(b => {
-            ctx.fillStyle = "yellow";
-            ctx.beginPath();
-            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, 7);
-            ctx.fill();
-        });
-        suns.forEach(s => {
-            ctx.fillStyle = "orange";
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, 12, 0, 7);
-            ctx.fill();
-        });
-
-        // рисуем газонокосилки
+        plants.forEach(p => ctx.drawImage(new Image(p.type ? PLANTS[p.type].img : ""), p.col * cellW + 2, p.row * cellH + 2, cellW - 4, cellH - 4));
+        zombies.forEach(z => ctx.drawImage(new Image(ZOMBIES[z.type]), z.x - 16, z.row * cellH, 32, cellH));
+        bullets.forEach(b => ctx.drawImage(new Image(BULLET_IMG), b.x - 4, b.row * cellH + cellH / 2 - 4, 8, 8));
+        suns.forEach(s => ctx.drawImage(new Image(SUN_IMG), s.x - 12, s.y - 12, 24, 24));
         lawnmowers.forEach(l => {
-            if (l.active) {
-                ctx.fillStyle = "silver";
-                ctx.fillRect(l.x, l.row * cellH, 20, cellH - 2);
-            }
+            if (l.active) ctx.drawImage(new Image(LAWNMOWER_IMG), l.x, l.row * cellH, 20, cellH - 2);
         });
-
         sunDiv.innerText = "Солнца: " + sun;
     }
 
+    // запуск
+    loadImages({
+        pea: PLANTS.pea.img,
+        sun: PLANTS.sun.img,
+        nut: PLANTS.nut.img,
+        normal: ZOMBIES.normal,
+        cone: ZOMBIES.cone,
+        bucket: ZOMBIES.bucket,
+        bullet: BULLET_IMG,
+        sunimg: SUN_IMG,
+        lawn: LAWNMOWER_IMG
+    }, () => {
+        (function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        })();
+    });
+
     const sunDiv = document.getElementById("sun"), status = document.getElementById("status");
-    (function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    })();
 </script>
 </body>
 </html>
