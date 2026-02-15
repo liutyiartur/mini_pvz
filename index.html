@@ -55,38 +55,39 @@
     const MAX_WAVES = 3;
 
     const PLANTS = {
-        pea: {cost: 50, hp: 3, shoot: true, img: "https://i.imgur.com/3q6L6xG.png"},
-        sun: {cost: 25, hp: 3, shoot: false, produce: true, cd: 300, img: "https://i.imgur.com/o6R6yLh.png"},
-        nut: {cost: 25, hp: 22, shoot: false, img: "https://i.imgur.com/EYcGpxO.png"}
-    };
-
-    // загрузка текстур зомби
-    const ZOMBIES = {
-        normal: "https://i.imgur.com/TtWsjok.png",
-        cone: "https://i.imgur.com/TZ3q0n7.png",
-        bucket: "https://i.imgur.com/woZbV5q.png"
-    };
-
-    // газонокосилка
-    const LAWNMOWER_IMG = "https://i.imgur.com/42cBvnE.png";
-    // пуля
-    const BULLET_IMG = "https://i.imgur.com/8LkxFpm.png";
-    // солнце
-    const SUN_IMG = "https://i.imgur.com/WXo1xlU.png";
-
-    let images = {};
-
-    function loadImages(urls, callback) {
-        let loaded = 0;
-        for (let key in urls) {
-            images[key] = new Image();
-            images[key].src = urls[key];
-            images[key].onload = () => {
-                loaded++;
-                if (loaded === Object.keys(urls).length) callback();
-            }
+        pea: {
+            cost: 50,
+            hp: 3,
+            shoot: true,
+            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABhElEQVQ4T5WTT0vDQBSGXx2k1kJAkRMBGJCHGpoRguwC6YQLCThwE2cAluAQLvIF7oBhzxB/Qm0JGBzMqZ3nZ33HnPlpnDl+f48z8eQDzCwBYBpoBvAFmABsAGKADbzxvxd+6r6+4EhDZwA+4GLAtIB7Vd9lkCngAD4AY8AZU1V4AY8AI8CywV+8l8O4Ue1kAMd64HAKlwG4grfI0AAuV1VwAI4EAY0ru43E9c9QAhcAqMYMkoV8BD4AUJgR4CyW+wA5gMHhwf6hnzAc/Mv38C7F4y6L1xHlz0U4Q9FVJbL2u+XkzxwAu4AJgC3AY4Bh4FfAWMx2YfYjT5/iB+4qG+pINiXvT6wXgPZB5HPF1IHoV/8F2bUMd/VEAGvhhYm6Xgyo6Aw9k3i4rGWevhxWj74f4uXw5w+eNCPtU6u4NLLT8V+wg4AAAAASUVORK5CYII="
+        },
+        sun: {
+            cost: 25,
+            hp: 3,
+            shoot: false,
+            produce: true,
+            cd: 300,
+            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABgklEQVQ4T5WTT0sDQRSGv+/IqKQsmAgIlo2EgSx8BkiMiAZSklYQBC0T+g+MhuUOwWLR3EXEGk7AwUiyJEs9ySCEldpNJE3EtrGxE7d17x7eZzB/3ccq2Yj3HuBnjGAkYj0M93Y6nXhGQf5+Z5G2duZk3k8Shm0uAKWZ0VQJWhA1tFskOehBVotN0o3y8zqlQWtrABu8W5c0QF6BoTSyK+gKv7pW1ZzWkVQUQB+iX/1eBqDGJkppcLKn7XJq3/d+oRRKwhQd9cK1qjsQq9rpihNwb6qVajzvJwC2xVtrT7+zwjdz5B7hPn0u+H4z6kntgAd9hs2Nyyj+hZ76iN+DKyvAqZg5Hk2nqF/4Bp1yX4i3jv3AAAAAElFTkSuQmCC"
+        },
+        nut: {
+            cost: 25,
+            hp: 22,
+            shoot: false,
+            img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABeElEQVQ4T5WTz0tCURiGv+/zGsgkULCQloyFi2uQGawhIQkxZCzqC4nBiNKbYxBBYCAqJbBVEhQhXwAKfBcn+P2keYxW0lCxfDKX7d3R8L/+2t+77lYwQ+M+AMALZcd0D4Aa6WvS+G0fYjAwAuQAGwCzYDWYBpkHedwhJq7x3cA+Ib4CUyyZAG+gJ/AlfhX4Dw1xj8B9X5aPoD+R3G8v+5zp+gMsvsI7QIYg4LrCjgAe7x9DnITuB2Mhi8Ow1hNv1eC7I5FgA02pj1iCh4qDsC+B90mhXSkHhqcM2DGlAlxPLuGNshhgbhCEciymYhFHCsbCuQqFVGnq5i7lwQfG9k4XGKy7bMC2X3Bv28IB+Ab93WnJexWhmZbZ+Ege34BmjN+YDZs6mnVqkNAAAAAElFTkSuQmCC"
         }
-    }
+    };
+
+    // зомби
+    const ZOMBIES = {
+        normal: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
+        cone: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABGElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
+        bucket: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABFElEQVQ4T2NkoBAwUqifG9X7/8/7+MQYGBgY/ACkE//8d1o2O/qQ6mg1EKAqLxcPCYj3uGJ/96//P/f8//z88p/1RjFxLMC4t3L9xYGf///Pz//zYGBgYp7I0B5p4YfvvwP1aF/B8I6AAjMzMAwMDQwMAgMSOfq59Zr/XZgZqB1kZGRkYGBgY2D/cO3Y4vT//39/YmNjY8BDxEAz8gU4/f+fzHzf19x+5AXz58Pz/wf+Lz5/fX78/h7x7Dx6/P3z/+/OxoYGRkYxFJgA2DPg8H/7/39+2/+fz5//9/Hz5//r8v5D/gYGBgYGBgYGAY7AAM8b+I3l3+L0AAAAASUVORK5CYII=",
+    };
+
+    // газонокосилка, пуля, солнце
+    const LAWNMOWER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAIklEQVQ4T2NkoBAwUqifw3EDgYGBgYGCAbGBoY6MAgAE/wP0MU5ljgAAAABJRU5ErkJggg==";
+    const BULLET_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAOCAYAAAA3A+DjAAAAKElEQVQoz2NkoBAwUqifQwMDAyMjIxMTAwMDAwMjIyMDFw0GJZCUGAAAKxRF0vE3S7AAAAAElFTkSuQmCC";
+    const SUN_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABTklEQVQ4T2NkoBAwUqifw3EDgYGBgYGCAbGBoY6MAgAE/wP0MU5ljgAAAABJRU5ErkJggg==";
 
     // газонокосилки по рядам
     for (let r = 0; r < rows; r++) {
@@ -253,35 +254,44 @@
             ctx.stroke();
         }
 
-        plants.forEach(p => ctx.drawImage(new Image(p.type ? PLANTS[p.type].img : ""), p.col * cellW + 2, p.row * cellH + 2, cellW - 4, cellH - 4));
-        zombies.forEach(z => ctx.drawImage(new Image(ZOMBIES[z.type]), z.x - 16, z.row * cellH, 32, cellH));
-        bullets.forEach(b => ctx.drawImage(new Image(BULLET_IMG), b.x - 4, b.row * cellH + cellH / 2 - 4, 8, 8));
-        suns.forEach(s => ctx.drawImage(new Image(SUN_IMG), s.x - 12, s.y - 12, 24, 24));
+        plants.forEach(p => {
+            let img = new Image();
+            img.src = PLANTS[p.type].img;
+            ctx.drawImage(img, p.col * cellW + 2, p.row * cellH + 2, cellW - 4, cellH - 4);
+        });
+
+        zombies.forEach(z => {
+            let img = new Image();
+            img.src = ZOMBIES[z.type];
+            ctx.drawImage(img, z.x - 16, z.row * cellH, 32, cellH);
+        });
+
+        bullets.forEach(b => {
+            let img = new Image();
+            img.src = BULLET_IMG;
+            ctx.drawImage(img, b.x - 4, b.row * cellH + cellH / 2 - 4, 8, 8);
+        });
+        suns.forEach(s => {
+            let img = new Image();
+            img.src = SUN_IMG;
+            ctx.drawImage(img, s.x - 12, s.y - 12, 24, 24);
+        });
         lawnmowers.forEach(l => {
-            if (l.active) ctx.drawImage(new Image(LAWNMOWER_IMG), l.x, l.row * cellH, 20, cellH - 2);
+            if (l.active) {
+                let img = new Image();
+                img.src = LAWNMOWER_IMG;
+                ctx.drawImage(img, l.x, l.row * cellH, 20, cellH - 2);
+            }
         });
         sunDiv.innerText = "Солнца: " + sun;
     }
 
     // запуск
-    loadImages({
-        pea: PLANTS.pea.img,
-        sun: PLANTS.sun.img,
-        nut: PLANTS.nut.img,
-        normal: ZOMBIES.normal,
-        cone: ZOMBIES.cone,
-        bucket: ZOMBIES.bucket,
-        bullet: BULLET_IMG,
-        sunimg: SUN_IMG,
-        lawn: LAWNMOWER_IMG
-    }, () => {
-        (function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        })();
-    });
-
+    (function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    })();
     const sunDiv = document.getElementById("sun"), status = document.getElementById("status");
 </script>
 </body>
