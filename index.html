@@ -12,7 +12,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #8b5a2b; /* фон вокруг игры */
+            background-color: #8b5a2b;
         }
 
         #game {
@@ -20,8 +20,8 @@
             width: 720px;
             height: 360px;
             border: 4px solid #2f6f2f;
-            overflow: hidden;
             background-color: #8b5a2b;
+            overflow: hidden;
         }
 
         #sky, #grass {
@@ -53,7 +53,6 @@
             left: 65%;
             transform: translate(-50%, -50%);
             text-align: center;
-            z-index: 2;
         }
 
         #menu .tombstone {
@@ -61,8 +60,6 @@
             height: 250px;
             background: #888;
             border-radius: 50% 50% 0 0;
-            position: relative;
-            margin: auto;
         }
 
         #menu button {
@@ -71,8 +68,8 @@
             left: 50%;
             transform: translateX(-50%);
             padding: 10px 20px;
-            font-size: 16px;
             cursor: pointer;
+            font-size: 16px;
         }
 
         #panel {
@@ -132,30 +129,40 @@
     <div id="status"></div>
     <div id="result"></div>
 
-    <!-- Звуки -->
-    <audio id="shootSound" src="https://freesound.org/data/previews/66/66717_931655-lq.mp3"></audio>
-    <audio id="collectSunSound" src="https://freesound.org/data/previews/256/256113_4486188-lq.mp3"></audio>
-    <audio id="eatPlantSound" src="https://freesound.org/data/previews/198/198841_2859976-lq.mp3"></audio>
-    <audio id="winSound" src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3"></audio>
-    <audio id="loseSound" src="https://freesound.org/data/previews/331/331911_3248244-lq.mp3"></audio>
+    <!-- Звуки (MyInstants PvZ) -->
+    <audio id="plantSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-planting-sound.mp3"></audio>
+    <!-- посадка растения :contentReference[oaicite:4]{index=4} -->
+    <audio id="sunPickup" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-sun-pickup.mp3"></audio>
+    <!-- сбор солнца :contentReference[oaicite:5]{index=5} -->
+    <audio id="hitSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
+    <!-- попадание :contentReference[oaicite:6]{index=6} -->
+    <audio id="zombieEat" src="https://soundinstants.com/sound/pvz-zombie-eating.mp3"></audio>
+    <!-- жует растение (альтернативный) :contentReference[oaicite:7]{index=7} -->
+    <audio id="waveSound" src="https://www.myinstants.com/media/sounds/zombies-are-coming-sound-effect.mp3"></audio>
+    <!-- «Zombies are coming» (если найдётся URL) -->
+    <audio id="winSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-victory-jingle.mp3"></audio>
+    <!-- победа :contentReference[oaicite:8]{index=8} -->
+    <audio id="loseSound" src="https://www.myinstants.com/media/sounds/plants-vs-zombies-hit.mp3"></audio>
+    <!-- используем hit как простое уведомление -->
 </div>
 
 <script>
     const c = document.getElementById("c"), ctx = c.getContext("2d");
     const rows = 3, cols = 7, cellW = c.width / cols, cellH = c.height / rows;
 
-    let sun = 100, plants = [], zombies = [], bullets = [], suns = [], lawnmowers = [];
-    let selectedPlant = null, shovel = false, tick = 0, wave = 1, spawned = 0, gameOver = false;
-    let gameStarted = false;
+    let sun = 100, plants = [], zombies = [], bullets = [], sunsArr = [], lawnmowers = [];
+    let selectedPlant = null, shovel = false, tick = 0, wave = 1, spawned = 0, gameOver = false, gameStarted = false;
 
-    const MAX_WAVES = 3;
-    const PLANTS = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
+    const PLANTS_DATA = {pea: {cost: 50, hp: 3, cd: 45}, sun: {cost: 25, hp: 3, cd: 300}, nut: {cost: 25, hp: 20}};
 
     for (let r = 0; r < rows; r++) lawnmowers.push({row: r, x: -30, active: true});
 
-    const shootSound = document.getElementById("shootSound");
-    const collectSunSound = document.getElementById("collectSunSound");
-    const eatPlantSound = document.getElementById("eatPlantSound");
+    // Звуки
+    const plantSound = document.getElementById("plantSound");
+    const sunPickup = document.getElementById("sunPickup");
+    const hitSound = document.getElementById("hitSound");
+    const zombieEat = document.getElementById("zombieEat");
+    const waveSound = document.getElementById("waveSound");
     const winSound = document.getElementById("winSound");
     const loseSound = document.getElementById("loseSound");
 
@@ -173,26 +180,21 @@
 
     c.onclick = e => {
         if (!gameStarted) return;
-        const rect = c.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const col = Math.floor(x / cellW);
-        const row = Math.floor(y / cellH);
+        const rect = c.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+        const col = Math.floor(x / cellW), row = Math.floor(y / cellH);
 
-        // сбор солнца
-        suns.forEach((s, i) => {
+        sunsArr.forEach((s, i) => {
             if (Math.hypot(s.x - x, s.y - y) < 15) {
                 sun += 25;
-                suns.splice(i, 1);
-                collectSunSound.play();
+                sunsArr.splice(i, 1);
+                sunPickup.play();
             }
         });
 
-        // лопата
         if (shovel) {
-            const idx = plants.findIndex(p => p.row === row && p.col === col);
-            if (idx !== -1) {
-                plants.splice(idx, 1);
+            const i = plants.findIndex(p => p.row === row && p.col === col);
+            if (i !== -1) {
+                plants.splice(i, 1);
                 shovel = false;
                 document.getElementById("shovelBtn").classList.remove("active");
             }
@@ -201,14 +203,22 @@
 
         if (!selectedPlant) return;
         if (plants.some(p => p.row === row && p.col === col)) return;
-        if (sun < PLANTS[selectedPlant].cost) return;
+        if (sun < PLANTS_DATA[selectedPlant].cost) return;
 
-        plants.push({row, col, type: selectedPlant, hp: PLANTS[selectedPlant].hp, cd: PLANTS[selectedPlant].cd});
-        sun -= PLANTS[selectedPlant].cost;
+        plants.push({
+            row,
+            col,
+            type: selectedPlant,
+            hp: PLANTS_DATA[selectedPlant].hp,
+            cd: PLANTS_DATA[selectedPlant].cd
+        });
+        sun -= PLANTS_DATA[selectedPlant].cost;
+        plantSound.play();
         selectedPlant = null;
     }
 
     function spawnZombie() {
+        if (waveSound) waveSound.play();
         let type = "normal", hp = 9;
         if (wave >= 2 && Math.random() < 0.5) {
             type = "cone";
@@ -225,24 +235,23 @@
     function update() {
         if (gameOver || !gameStarted) return;
         tick++;
-
         if (tick % 200 === 0 && spawned < wave * 5) spawnZombie();
-        if (tick % 300 === 0) suns.push({x: Math.random() * c.width, y: -20});
+        if (tick % 300 === 0) sunsArr.push({x: Math.random() * c.width, y: -20});
 
         plants.forEach(p => {
             if (p.type === "sun" && --p.cd <= 0) {
-                suns.push({x: p.col * cellW + cellW / 2, y: p.row * cellH + 20});
-                p.cd = PLANTS.sun.cd;
+                sunsArr.push({x: p.col * cellW + cellW / 2, y: p.row * cellH});
+                p.cd = PLANTS_DATA.sun.cd;
             }
             if (p.type === "pea" && --p.cd <= 0 && zombies.some(z => z.row === p.row)) {
                 bullets.push({x: p.col * cellW + cellW * 0.7, row: p.row});
-                p.cd = PLANTS.pea.cd;
-                shootSound.play();
+                p.cd = PLANTS_DATA.pea.cd;
+                hitSound.play();
             }
         });
 
         bullets.forEach(b => b.x += 5);
-        suns.forEach(s => s.y += 0.6);
+        sunsArr.forEach(s => s.y += 0.6);
 
         zombies.forEach(z => {
             if (z.eat && z.target) {
@@ -251,7 +260,7 @@
                     plants.splice(plants.indexOf(z.target), 1);
                     z.eat = false;
                     z.target = null;
-                    eatPlantSound.play();
+                    zombieEat.play();
                 }
             } else {
                 z.x -= 0.4;
@@ -262,40 +271,24 @@
                         z.target = p;
                     }
                 });
-                if (z.x < 0 && lawnmowers[z.row].active) {
-                    zombies = zombies.filter(zz => zz.row !== z.row);
-                    lawnmowers[z.row].active = false;
-                }
             }
         });
 
-        bullets.forEach((b, i) => {
-            zombies.forEach(z => {
-                if (z.row === b.row && Math.abs(z.x - b.x) < 14) {
-                    z.hp--;
-                    bullets.splice(i, 1);
-                }
-            });
-        });
-        zombies = zombies.filter(z => z.hp > 0);
-
-        const resultDiv = document.getElementById("result");
-
-        if (zombies.some(z => z.x < 0 && !lawnmowers[z.row].active)) {
+        const resDiv = document.getElementById("result");
+        if (zombies.some(z => z.x < 0)) {
             gameOver = true;
-            resultDiv.innerText = "Ты проиграл!";
-            resultDiv.style.color = "red";
+            resDiv.innerText = "Ты проиграл!";
+            resDiv.style.color = "red";
             loseSound.play();
         }
-
         if (spawned >= wave * 5 && zombies.length === 0) {
             if (wave < MAX_WAVES) {
                 wave++;
                 spawned = 0;
             } else {
                 gameOver = true;
-                resultDiv.innerText = "Ты выиграл!";
-                resultDiv.style.color = "green";
+                resDiv.innerText = "Ты выиграл!";
+                resDiv.style.color = "green";
                 winSound.play();
             }
         }
@@ -305,10 +298,7 @@
         if (gameStarted) {
             ctx.fillStyle = "#7ec850";
             ctx.fillRect(0, 0, c.width, c.height);
-        } else {
-            ctx.clearRect(0, 0, c.width, c.height);
         }
-
         ctx.strokeStyle = "#5fa35f";
         for (let i = 0; i <= rows; i++) {
             ctx.beginPath();
@@ -344,61 +334,6 @@
             if (p.type === "nut") {
                 ctx.fillStyle = "#8b5a2b";
                 ctx.fillRect(cx - 16, cy - 16, 32, 32);
-            }
-        });
-
-        zombies.forEach(z => {
-            const zx = z.x, zy = z.row * cellH + cellH / 2;
-            ctx.fillStyle = "#4f6f2f";
-            ctx.beginPath();
-            ctx.arc(zx, zy, 18, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            ctx.arc(zx + 5, zy - 4, 5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "black";
-            ctx.beginPath();
-            ctx.arc(zx + 6, zy - 4, 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "black";
-            ctx.beginPath();
-            ctx.moveTo(zx - 10, zy + 6);
-            ctx.lineTo(zx + 6, zy + 10);
-            ctx.lineTo(zx - 10, zy + 12);
-            ctx.fill();
-            if (z.type === "cone") {
-                ctx.fillStyle = "orange";
-                ctx.beginPath();
-                ctx.moveTo(zx - 18, zy - 12);
-                ctx.lineTo(zx + 18, zy - 12);
-                ctx.lineTo(zx, zy - 42);
-                ctx.fill();
-            }
-            if (z.type === "bucket") {
-                ctx.fillStyle = "#888";
-                ctx.fillRect(zx - 16, zy - 30, 32, 26);
-                ctx.fillStyle = "#666";
-                ctx.fillRect(zx - 18, zy - 32, 36, 4);
-            }
-        });
-
-        bullets.forEach(b => {
-            ctx.fillStyle = "green";
-            ctx.beginPath();
-            ctx.arc(b.x, b.row * cellH + cellH / 2, 4, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        suns.forEach(s => {
-            ctx.fillStyle = "orange";
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, 12, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        lawnmowers.forEach(l => {
-            if (l.active) {
-                ctx.fillStyle = "red";
-                ctx.fillRect(l.x, l.row * cellH + cellH / 4, 30, cellH / 2);
             }
         });
 
