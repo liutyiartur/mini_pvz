@@ -29,6 +29,10 @@
         #panel {
             margin-bottom: 5px;
         }
+
+        button.active {
+            background: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -105,7 +109,11 @@
 
     // Зомби
     function spawnZombie() {
-        let ztype = "normal", hp = 9;
+        let ztype = "normal";
+        let rand = Math.random();
+        if (rand < 0.3) ztype = "cone";
+        else if (rand < 0.5) ztype = "bucket";
+        let hp = ztype === "bucket" ? 30 : ztype === "cone" ? 18 : 10;
         zombies.push({
             row: Math.floor(Math.random() * rows),
             x: c.width - 20,
@@ -183,7 +191,7 @@
 
         // Поражение
         if (zombies.some(z => z.x <= 0 && !lawnmowers[z.row].active)) {
-            status.innerText = "💀 Поражение";
+            document.getElementById("status").innerText = "💀 Поражение";
         }
     }
 
@@ -251,6 +259,20 @@
             // рот
             ctx.fillStyle = "black";
             ctx.fillRect(z.x - 8, zy + 8, 16, 4);
+            // конус или ведро
+            if (z.type === "cone") {
+                ctx.fillStyle = "orange";
+                ctx.beginPath();
+                ctx.moveTo(z.x - 15, zy - 18);
+                ctx.lineTo(z.x + 15, zy - 18);
+                ctx.lineTo(z.x, zy - 35);
+                ctx.closePath();
+                ctx.fill();
+            }
+            if (z.type === "bucket") {
+                ctx.fillStyle = "gray";
+                ctx.fillRect(z.x - 15, zy - 35, 30, 18);
+            }
         });
 
         // Пули
