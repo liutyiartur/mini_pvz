@@ -301,7 +301,9 @@
             if (s.y < s.targetY) s.y += 0.8;
         });
 
-        zombies.forEach(z => {
+        for (let i = zombies.length - 1; i >= 0; i--) {
+            const z = zombies[i];
+
             if (z.eat) {
                 if (z.target && plants.includes(z.target)) {
                     z.target.hp -= 0.03;
@@ -333,22 +335,21 @@
                 const mower = mowers[z.row];
 
                 if (mower && !mower.used) {
-
                     mower.active = true;
                     mower.used = true;
 
-                    zombies.splice(zombies.indexOf(z), 1);
-
-                    return;
-                } else if (!mower || mower.used) {
+                    zombies.splice(i, 1);
+                    continue;
+                } else {
 
                     gameOver = true;
                     playSound("lose");
                     document.getElementById("result").innerText = "Ты проиграл!";
                     document.getElementById("result").style.color = "red";
+                    break;
                 }
             }
-        });
+        }
 
         mowers.forEach(m => {
             if (m.active) {
